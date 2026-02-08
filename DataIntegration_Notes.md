@@ -2,7 +2,7 @@
 
 ## Esercizi Riassuntivi
 
-### Ese 1
+### <u> Ese 1 </u>
 
 **Creare nel repository Talend i metadati relativi al file Employees.txt.**
 
@@ -24,7 +24,7 @@ Clicchiamo su refresh preview per un cross-check, e se otteniamo un risultato si
 
 ---
 
-### Ese 2
+### <u> Ese 2 </u>
 
 **Utilizzando i metadati definiti nell'esercizio 1, leggere il file Employees.txt e stamparne a video il contenuto.**
 
@@ -65,7 +65,32 @@ Nella scheda Component, mettiamo il radio button su Mode = Table, in questo modo
 Terminato tutto possiamo andare nella scheda Run e cliccare "Run" per eseguire il job.
 
 
-### Ese 3
+### <u> Ese 3 </u>
+
+**Utilizzando i metadati definiti nell'esercizio 1, leggere il file Employees.txt e generare come output un file csv con header avente lo stesso tracciato del file originario ma come delimitatore per le colonne il carattere ';'**
+
+Per la realizzazione dell'esercizio é necessario utilizzare due componenti:
+1.  tFileInputDelimited, che rappresenta il file di input CSV da leggere
+2.  tFileOutputDelimited, che rappresenta il file di output CSV in cui scriveremo.
+
+La configurazione del tFileInputDelimited avviene come fatto precedentemente, sfruttando i metadata creati nell'esercizio 1 e inserendo le modifiche necessarie nella scheda Component.
+
+Per quanto riguada la configurazione del tFileOutputDelimited é necessario:
+- configurare il *File Name* inserendo il percorso assoluto di dove salveremo il file di output (e.g "C:/Program Files (x86)/TOS_DI-8.0.1/studio/workspace/out.csv")
+- inseriamo come *Field Separator* il valore ";"
+- togliere la spunta da 'Use OS line separator as row separator ...'
+- spuntare *Include Header* in quanto vogliamo mantenere come prima riga l'intestazione del file
+- infine come cross-check clicchiamo su 'edit schema' per controllare che lo schema è stato importato correttamente.
+  
+Successivamente andiamo nella schermata *Advanced Settings* dove:
+- abilitiamo *CSV options* e inseriamo i soliti valori per *Escape char* e *Text enclosure*
+- spuntiamo *Create directory if does not exist*
+- selezioniamo 'UTF-8' come *Encoding*.
+- togliamo la spunta da *Throw an error if the file already exist*.
+
+
+
+
 
 
 
