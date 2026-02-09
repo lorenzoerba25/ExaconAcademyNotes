@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:TalendMetadata="http://www.talend.org/metadata/connection/2010" xmlns:orgomg.cwm.resource.record="http:///orgomg/cwm/resource/record.ecore">
+  <TalendMetadata:FileExcelConnection xmi:id="_haQcIQULEfGgNrlol_KLvg" name="M_EmployeesJobs_Jobs" dataPackage="_haQcIgULEfGgNrlol_KLvg" Server="Localhost 127.0.0.1" FilePath="C:/Program Files (x86)/TOS_DI-8.0.1/studio/workspace/FileInput/Employees_Jobs.xlsx" Encoding="UTF-8" UseHeader="true" HeaderValue="1" FirstLineCaption="true" SheetName="Jobs" firstColumn="1" thousandSeparator="','" decimalSeparator="'.'" sheetList="Jobs:w&#xA;">
+    <sheetColumns>A</sheetColumns>
+    <sheetColumns>B</sheetColumns>
+    <sheetColumns>C</sheetColumns>
+    <sheetColumns>D</sheetColumns>
+  </TalendMetadata:FileExcelConnection>
+  <orgomg.cwm.resource.record:RecordFile xmi:id="_haQcIgULEfGgNrlol_KLvg" name="default" dataManager="_haQcIQULEfGgNrlol_KLvg">
+    <ownedElement xsi:type="TalendMetadata:MetadataTable" xmi:id="_haQcIwULEfGgNrlol_KLvg" id="_csQb8AULEfGgNrlol_KLvg" label="metadata">
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_haQcJAULEfGgNrlol_KLvg" label="job_id" length="2" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_haQcJQULEfGgNrlol_KLvg" label="job_desc" length="28" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_haQcJgULEfGgNrlol_KLvg" label="min_lvl" length="4" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_haQcJwULEfGgNrlol_KLvg" label="max_lvl" length="3" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+    </ownedElement>
+  </orgomg.cwm.resource.record:RecordFile>
+</xmi:XMI>

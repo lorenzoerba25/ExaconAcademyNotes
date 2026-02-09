@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<talendfile:ContextType xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:talendfile="platform:/resource/org.talend.model/model/TalendFile.xsd" xmi:id="_E1BncAUTEfGPXJTFspSNPA" confirmationNeeded="false" name="lerba_dev">
+  <contextParameter xmi:id="_E1BncQUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_Schema" prompt="Context_Postgres1_Schema?" promptNeeded="false" repositoryContextId="" type="id_String" value="lerba"/>
+  <contextParameter xmi:id="_E1BncgUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_Login" prompt="Context_Postgres1_Login?" promptNeeded="false" repositoryContextId="" type="id_String" value="lerba"/>
+  <contextParameter xmi:id="_E1BncwUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_Port" prompt="Context_Postgres1_Port?" promptNeeded="false" repositoryContextId="" type="id_String" value="5432"/>
+  <contextParameter xmi:id="_E1BndAUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_Password" prompt="Context_Postgres1_Password?" promptNeeded="false" repositoryContextId="" type="id_Password" value="enc:system.encryption.key.v1:8tcXLegFRJk6Pl9PFpVNcrL9iYPDK71KN53/ZiBDD4E7hYU="/>
+  <contextParameter xmi:id="_E1BndQUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_Server" prompt="Context_Postgres1_Server?" promptNeeded="false" repositoryContextId="" type="id_String" value="10.3.0.120"/>
+  <contextParameter xmi:id="_E1BndgUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_Database" prompt="Context_Postgres1_Database?" promptNeeded="false" repositoryContextId="" type="id_String" value="postgres"/>
+  <contextParameter xmi:id="_E1BndwUTEfGPXJTFspSNPA" comment="" name="Context_Postgres1_AdditionalParams" prompt="Context_Postgres1_AdditionalParams?" promptNeeded="false" repositoryContextId="" type="id_String" value=""/>
+</talendfile:ContextType>

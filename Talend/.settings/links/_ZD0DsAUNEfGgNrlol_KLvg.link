@@ -1,0 +1,18 @@
+{
+  "itemId" : "_ZD0DsAUNEfGgNrlol_KLvg",
+  "contextList" : [ {
+    "contextName" : "loryPortatile",
+    "repoId" : "_nE1xUAQDEfGJksnXGNCABw",
+    "parameterList" : [ {
+      "id" : "_nE-UMwQDEfGJksnXGNCABw",
+      "name" : "localPath"
+    } ]
+  }, {
+    "contextName" : "loryFisso",
+    "repoId" : "_nE1xUAQDEfGJksnXGNCABw",
+    "parameterList" : [ {
+      "id" : "_nE-UMQQDEfGJksnXGNCABw",
+      "name" : "localPath"
+    } ]
+  } ]
+}

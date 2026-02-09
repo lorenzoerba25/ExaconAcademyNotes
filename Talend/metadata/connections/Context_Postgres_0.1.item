@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TalendMetadata:DatabaseConnection xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:TalendMetadata="http://www.talend.org/metadata/connection/2010" xmi:id="_bHGGEALIEfGyJsHPnl-bnw" name="Context_Postgres" id="_WZGs8ALIEfGyJsHPnl-bnw" label="Context_Postgres" ContextMode="true" ContextId="_E032cAUTEfGPXJTFspSNPA" contextName="lerba_dev" DatabaseType="PostgreSQL" DriverClass="org.postgresql.Driver" URL="jdbc:postgresql://10.3.0.120:5432/postgres?" dbVersionString="V9_X" Port="context.Context_Postgres1_Port" Username="context.Context_Postgres1_Login" Password="context.Context_Postgres1_Password" ServerName="context.Context_Postgres1_Server" DatasourceName="" FileFieldName="" SID="context.Context_Postgres1_Database" SqlSynthax="" StringQuote="" NullChar="" DbmsId="postgres_id" ProductId="POSTGRESQL" AdditionalParams="context.Context_Postgres1_AdditionalParams" StandardSQL="true" SQLMode="false" UiSchema="context.Context_Postgres1_Schema">
+  <taggedValue xmi:id="_bHGtIALIEfGyJsHPnl-bnw" tag="Is Conn Need Reload" value="true"/>
+  <taggedValue xmi:id="_bHMMsALIEfGyJsHPnl-bnw" tag="package filter" value=""/>
+  <taggedValue xmi:id="_bHOo8ALIEfGyJsHPnl-bnw" tag="Status" value=""/>
+  <taggedValue xmi:id="_bHOo8QLIEfGyJsHPnl-bnw" tag="Version" value="0.1"/>
+  <taggedValue xmi:id="_bHOo8gLIEfGyJsHPnl-bnw" tag="Purpose" value=""/>
+  <taggedValue xmi:id="_bHOo8wLIEfGyJsHPnl-bnw" tag="Description" value=""/>
+  <taggedValue xmi:id="_bHOo9ALIEfGyJsHPnl-bnw" tag="Author" value=""/>
+  <taggedValue xmi:id="_bHOo9QLIEfGyJsHPnl-bnw" tag="otherParameter"/>
+  <parameters xmi:id="_bHGtIQLIEfGyJsHPnl-bnw" key="CONN_PARA_KEY_USERNAME" value="context.Context_Postgres1_Login"/>
+  <parameters xmi:id="_cPClkALIEfGyJsHPnl-bnw" key="CONN_PARA_KEY_MAPRDB_TABLE_NS_MAPPING" value=""/>
+</TalendMetadata:DatabaseConnection>

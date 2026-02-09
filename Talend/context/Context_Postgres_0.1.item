@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:talendfile="platform:/resource/org.talend.model/model/TalendFile.xsd">
+  <talendfile:ContextType xmi:id="_TQc58ALIEfGyJsHPnl-bnw" confirmationNeeded="false" name="lerba_dev">
+    <contextParameter xmi:id="_TQc58QLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Login" prompt="Context_Postgres_Login?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="lerba"/>
+    <contextParameter xmi:id="_TQc58gLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Port" prompt="Context_Postgres_Port?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="5432"/>
+    <contextParameter xmi:id="_TQc58wLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Schema" prompt="Context_Postgres_Schema?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="lerba"/>
+    <contextParameter xmi:id="_TQc59ALIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Server" prompt="Context_Postgres_Server?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="10.3.0.120"/>
+    <contextParameter xmi:id="_TQc59QLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Database" prompt="Context_Postgres_Database?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="postgres"/>
+    <contextParameter xmi:id="_TQc59gLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Password" prompt="Context_Postgres_Password?" promptNeeded="false" repositoryContextId="built-in" type="id_Password" value="enc:system.encryption.key.v1:zmzq37B/ls9ur0F/AhAB91zegNJJ6JLR9WMaFpH0Y8RKk74="/>
+    <contextParameter xmi:id="_TQc59wLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_AdditionalParams" prompt="Context_Postgres_AdditionalParams?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value=""/>
+  </talendfile:ContextType>
+  <talendfile:ContextType xmi:id="_TQc5-ALIEfGyJsHPnl-bnw" confirmationNeeded="false" name="lerba_prod">
+    <contextParameter xmi:id="_TQc5-QLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Login" prompt="Context_Postgres_Login?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="lerba"/>
+    <contextParameter xmi:id="_TQc5-gLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Port" prompt="Context_Postgres_Port?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="5432"/>
+    <contextParameter xmi:id="_TQc5-wLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Schema" prompt="Context_Postgres_Schema?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="lerba"/>
+    <contextParameter xmi:id="_TQc5_ALIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Server" prompt="Context_Postgres_Server?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="10.3.0.220"/>
+    <contextParameter xmi:id="_TQc5_QLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Database" prompt="Context_Postgres_Database?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="postgres"/>
+    <contextParameter xmi:id="_TQc5_gLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_Password" prompt="Context_Postgres_Password?" promptNeeded="false" repositoryContextId="built-in" type="id_Password" value="enc:system.encryption.key.v1:+GaHUdHEDTXCIyfRb8MyNg69h8mJQRdZYRF8WWUZugwZkSw="/>
+    <contextParameter xmi:id="_TQc5_wLIEfGyJsHPnl-bnw" comment="" name="Context_Postgres_AdditionalParams" prompt="Context_Postgres_AdditionalParams?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value=""/>
+  </talendfile:ContextType>
+</xmi:XMI>
