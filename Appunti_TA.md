@@ -45,7 +45,9 @@ WebElement genericElement = driver.findElement(By.id("idOfButton"));
 
 Il metodo 
 
+```java
 driver.manage().timeout().implicitlyWait(Duration.ofSeconds(4));
+```
 
 consente di effettuare, per tutte le volte che chiamaiamo findElement, di provare a cercare quell'elemento, e se non lo trova, continua a cercarlo fino alla durata specificata nel timer (in questo caso 4 secondi). Se lo trova, non aspetta quella quantità di tempo, bensì termina. Se non lo trova e trascorre quella quantià di tempo, lancia un'eccezione.
 
@@ -54,8 +56,9 @@ consente di effettuare, per tutte le volte che chiamaiamo findElement, di provar
 
 Il metodo invece
 
+```java
 driver.quit();
-
+```
 consente di chiudere la finestra del browser. Ovviamente se prima si verifica una qualsiasi eccezione prima del quit, il browser non verrà mai chiuso. Una possibile soluzione è usando un try-catch sull'eccezione ```NoSuchElementException```.
 
 
@@ -68,6 +71,12 @@ La best-practice da usare è quella di definire:
 - un metodo ```setup()``` dove setuppiamo il driver, con java notation ```@BeforeMethod``` che specifica che verrà eseguito questo metodo ogni volta prima dei metodi annotati come ```@Test```
 - un metodo ```tearDown()``` dove inseriamo la chiusura del browser, annotandolo con ```@AfterMethod``` per far si che venga eseguito sempre alla fine di ogni metodo annotato come ```@Test```
 - un metodo ```test()``` dove scriviamo il test vero e proprio annotato tramite ```@Test```.
+
+Inoltre possiamo utilizzare altri due tipi di annotazioni:
+- ```@BeforeSuite``` che sostanzialmente annota un metodo che viene eseguito una sola volta prima di tutti i test
+- ```@AfterSuite``` che sostanzialmente annota un metodo che viene eseguito una sola volta dopo l-esecuzione di tutti i test (indipendentemente dall'esito).
+
+
 
 Il vantaggio è avere una struttura pulita, automatizzata ed efficiente, perchè posso scrivere più test, separati. 
 
@@ -84,11 +93,15 @@ Per esempio ```driver.findElement(By.cssSelector("[attributo='valore'"]))```
 Un'altro esempio di test che possiamo fare per esempio è attraverso l'uso degli assert. Per esempio:
 
 
-```Assert.assertTrue(driver.finElementById(...).isDisplayed())```
+```java
+Assert.assertTrue(driver.finElementById(...).isDisplayed())
+```
 
 controlla se l'elemento specificato viene mostrato a video, oppure
 
-```Assert.assertEquals(String, driver.findElement(..).getText());```
+```java 
+Assert.assertEquals(String, driver.findElement(..).getText());
+```
 
 per controllare se l'elemento contiene il testo desiderato.
 
