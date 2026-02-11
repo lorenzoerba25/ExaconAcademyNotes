@@ -11,7 +11,7 @@
   <groupId>org.example.local_project.bean</groupId>
   <artifactId>beans</artifactId>
   <version>8.0.1</version>
-  <name>LOCAL_PROJECT Beans</name>
+  <name>GITDATAINTEGRATION Beans</name>
   <properties>
     <talend.codes.package>beans</talend.codes.package>
     <maven.compiler.failOnError>${codes.compile.failOnError}</maven.compiler.failOnError>

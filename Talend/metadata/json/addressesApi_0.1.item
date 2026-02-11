@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:TalendJSON="http://www.talend.org/json" xmlns:TalendMetadata="http://www.talend.org/metadata/connection/2010" xmlns:orgomg.cwm.resource.record="http:///orgomg/cwm/resource/record.ecore">
+  <TalendJSON:JSONFileConnection xmi:id="_J8tZAAZ-EfGo-4GiMIK30w" name="addressesApi" dataPackage="_J8tZDAZ-EfGo-4GiMIK30w" JSONFilePath="C:/Program Files (x86)/TOS_DI-8.0.1/studio/workspace/FileInput/fakerapi.json" Encoding="UTF-8" readbyMode="JSONPATH">
+    <schema xmi:id="_J8tZAQZ-EfGo-4GiMIK30w" LimitBoucle="50" AbsoluteXPathQuery="$.data[*]">
+      <schemaTargets xmi:id="_J8tZAgZ-EfGo-4GiMIK30w" RelativeXPathQuery="id" TagName="id"/>
+      <schemaTargets xmi:id="_J8tZAwZ-EfGo-4GiMIK30w" RelativeXPathQuery="street" TagName="street"/>
+      <schemaTargets xmi:id="_J8tZBAZ-EfGo-4GiMIK30w" RelativeXPathQuery="streetName" TagName="streetName"/>
+      <schemaTargets xmi:id="_J8tZBQZ-EfGo-4GiMIK30w" RelativeXPathQuery="buildingNumber" TagName="buildingNumber"/>
+      <schemaTargets xmi:id="_J8tZBgZ-EfGo-4GiMIK30w" RelativeXPathQuery="city" TagName="city"/>
+      <schemaTargets xmi:id="_J8tZBwZ-EfGo-4GiMIK30w" RelativeXPathQuery="zipcode" TagName="zipcode"/>
+      <schemaTargets xmi:id="_J8tZCAZ-EfGo-4GiMIK30w" RelativeXPathQuery="country" TagName="country"/>
+      <schemaTargets xmi:id="_J8tZCQZ-EfGo-4GiMIK30w" RelativeXPathQuery="country_code" TagName="country_code"/>
+      <schemaTargets xmi:id="_J8tZCgZ-EfGo-4GiMIK30w" RelativeXPathQuery="latitude" TagName="latitude"/>
+      <schemaTargets xmi:id="_J8tZCwZ-EfGo-4GiMIK30w" RelativeXPathQuery="longitude" TagName="longitude"/>
+    </schema>
+  </TalendJSON:JSONFileConnection>
+  <orgomg.cwm.resource.record:RecordFile xmi:id="_J8tZDAZ-EfGo-4GiMIK30w" name="default" dataManager="_J8tZAAZ-EfGo-4GiMIK30w">
+    <ownedElement xsi:type="TalendMetadata:MetadataTable" xmi:id="_J8tZDQZ-EfGo-4GiMIK30w" id="_510N8AZ9EfGo-4GiMIK30w" label="addressesApi">
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZDgZ-EfGo-4GiMIK30w" label="id" length="2" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZDwZ-EfGo-4GiMIK30w" label="street" length="31" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZEAZ-EfGo-4GiMIK30w" label="streetName" length="15" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZEQZ-EfGo-4GiMIK30w" label="buildingNumber" length="5" talendType="id_Integer" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZEgZ-EfGo-4GiMIK30w" label="city" length="19" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZEwZ-EfGo-4GiMIK30w" label="zipcode" length="10" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZFAZ-EfGo-4GiMIK30w" label="country" length="21" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZFQZ-EfGo-4GiMIK30w" label="country_code" length="2" talendType="id_String" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZFgZ-EfGo-4GiMIK30w" label="latitude" length="10" precision="7" talendType="id_Double" pattern="&quot;dd-MM-yyyy&quot;"/>
+      <feature xsi:type="TalendMetadata:MetadataColumn" xmi:id="_J8tZFwZ-EfGo-4GiMIK30w" label="longitude" length="11" precision="8" talendType="id_Double" pattern="&quot;dd-MM-yyyy&quot;"/>
+    </ownedElement>
+  </orgomg.cwm.resource.record:RecordFile>
+</xmi:XMI>

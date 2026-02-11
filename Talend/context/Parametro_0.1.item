@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<talendfile:ContextType xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:talendfile="platform:/resource/org.talend.model/model/TalendFile.xsd" xmi:id="_oivbEAZmEfGo-4GiMIK30w" confirmationNeeded="false" name="Default">
+  <contextParameter xmi:id="_oivbEQZmEfGo-4GiMIK30w" comment="" name="parametro_input" prompt="parametro_input?" promptNeeded="false" repositoryContextId="built-in" type="id_String" value="Lorenzo"/>
+</talendfile:ContextType>

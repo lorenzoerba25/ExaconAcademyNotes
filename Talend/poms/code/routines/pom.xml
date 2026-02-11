@@ -11,7 +11,7 @@
   <groupId>org.example.local_project.code</groupId>
   <artifactId>routines</artifactId>
   <version>8.0.1</version>
-  <name>LOCAL_PROJECT Routines</name>
+  <name>GITDATAINTEGRATION Routines</name>
   <properties>
     <talend.codes.package>routines</talend.codes.package>
     <maven.compiler.failOnError>${codes.compile.failOnError}</maven.compiler.failOnError>

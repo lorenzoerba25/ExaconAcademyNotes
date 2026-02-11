@@ -6,10 +6,10 @@
   <artifactId>code.Master</artifactId>
   <version>8.0.1</version>
   <packaging>pom</packaging>
-  <name>LOCAL_PROJECT Codes Master</name>
+  <name>GITDATAINTEGRATION Codes Master</name>
   <url>http://www.talend.org/</url>
   <properties>
-    <talend.project.name>LOCAL_PROJECT</talend.project.name>
+    <talend.project.name>GITDATAINTEGRATION</talend.project.name>
     <encoding>UTF-8</encoding>
   </properties>
   <build>
