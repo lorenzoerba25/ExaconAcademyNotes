@@ -1,7 +1,10 @@
 # Appunti
 
 ## Diario delle lezioni
-* [Lezione del 6/2/26 - 252](#lezione-6226)
+- [Appunti](#appunti)
+  - [Diario delle lezioni](#diario-delle-lezioni)
+  - [Lezione 6/2/26](#lezione-6226)
+  - [Lezione 12/2/26](#lezione-12226)
 
 
 ## Lezione 6/2/26
@@ -104,4 +107,13 @@ Assert.assertEquals(String, driver.findElement(..).getText());
 ```
 
 per controllare se l'elemento contiene il testo desiderato.
+
+## Lezione 12/2/26
+
+...
+
+
+Con XPath ricordiamo che con un `/` indichiamo che vogliamo cercare in quella root, mentre `//` ci dice di partire a cercare in tutta la pagina non nella root principale. 
+
+La prima soluzione prende il nome di **Full XPath**, solitamente utilizzato in caso di test generici che eseguiamo *una tantum*, in quanto è molto frequente che in un sito vi siano piccole variazioni. La seconda soluzione prende il nome generico di XPath. In entrambi i casi si scoraggia l'uso di XPath perchè risulta essere particolarmente lento (termini di milliseconi) durante la ricerca di un componente.
 
