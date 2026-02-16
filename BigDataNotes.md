@@ -23,3 +23,5 @@ Vediamo ora come viene organizzata un'applicazione Spark proprio sul piano di es
 
 Un'applicazione viene inizialmente divisa in una serie di job, una serie di operazioni generate in risposta a una determinata azione.
 I job creano a loro volta una serie di operazioni chiamate Stage, che sono operazioni eseguibili senza shuffle. Se eseguo una nuova trasformazione wide, genero pertanto un nuovo stage. A loro volta infine gli stage sono composti da una serie di task che sono le unità elementari da eseguire sugli executor del cluster.S
+
+
