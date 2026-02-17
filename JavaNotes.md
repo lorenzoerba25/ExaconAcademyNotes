@@ -213,3 +213,208 @@ Optional.ofNullable(ordine)  // ordine è di classe 'Ordine'
     .map(i -> i.citta)              // citta è una String
     .orElse("Città sconosciuta");
 ```
+
+Ora passiamo a vedere la classe `Stream`. In Java la classe `Stream` rappresenta un wrapper per funzioni che operano su più elementi.
+
+Per esempio questo codice, a partire da uno stream di interi, applica la funzione `toDouble`, poi la funzione `toSquare` e infine la funzione `isBelow70`, la quale restituisce `true` se l'intero è minore di 70 (nel caso degli Stream si applica la filter a ogni elemento, se la condizione viene rispettata l'elemento rimane altrimenti viene scartato):
+```java
+List<Integer> transformed = Stream.of(7, 2, 4, 21)
+                .map(Main::toDouble)
+                .map(Main::toSquare)
+                .filter(Main::isBelow70)
+                // qui ricolleziono gli elementi dello stream in una lista
+                .toList();
+```
+
+Un esempio simile al precedente che permette di prendere il primo elemento dello stream:
+```java
+int firstTransformed = Stream.of(7, 2, 4, 21)
+                .map(Main::toDouble)
+                .map(Main::toSquare)
+                .filter(Main::isBelow70)
+                // qui prendo il primo elemento, visto che può non esserci viene wrappato in un opzionale
+                .findFirst() // resttiuisce un Optional<Integer>
+                .orElse(-1);
+```
+
+Un'altra funzione utile è `reduce`, che prende in input lo stream e lo compatta in unico elemento a seconda della funzione specificata.
+```java
+List<Integer> lista = List.of(1,2,3,4);
+//1 rappresenta l'elemento neutro dell'operazione moltiplicazione
+//(acc,x) -> acc * x rappresenta la funzione che prendéin input due elementi e restituisce il prodotto, dove acc è l'accumulatore dei prodotti parziali mentre x è l'elemento i-esimo della lista
+int resultCompressed = lista.stream()
+        .reduce(1,(acc,x)-> acc * x);
+
+```
+
+Possiamo realizzare anche degli stream a partire da delle stringhe. In questo caso andiamo a usare il metodo `lines` che restituisce uno stream di stringhe separando le righe (spezza la stringa dove incontra un `\n`). Successivamente applichiamo la funzione `map(String::trim)` che modifica lo stream, eliminando caratteri di spazio e tabulazioni. Poi applichiamo `mapToInt` a cui passiamo una funzione che prenda l'oggetto e restituisca un int (nel nostro caso la built-in `Integer.parseInt`). Infine applichiamo la funzione `sum`, la quale applica la reduce vista prima con una funzione somma.
+
+```java 
+String l = "1\n2\n3\n";
+
+int sumOfStr = l.lines()
+        .map(String::trim)
+        // map to int mi genera un IntStream, uno stream specializzato per gli interi
+        .mapToInt(Integer::parseInt)
+        // l'intStream ha un metodo per sommare gli elementi
+        .sum();
+```
+
+Se vogliamo generare uno stream di valori compresi in un determinato range, possiamo utilizzare la funzione `range` della classe `IntStream`. Successivamente applichiamo la funzione `average` che restituisce un `OptionalDouble` in quanto lo stream potrebbe essere vuoto.
+```java
+double avg = IntStream.range(0, 11).average().orElse(0.0);
+```
+
+Analogamente possiamo calcolarci la media a partire da un array:
+```java
+int[] arr = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+double avg2 = Arrays.stream(arr).average().orElse(0.0);
+```
+
+Di seguito possiamo osservare un'applicazione degli stream:
+```java
+public static void main(String[] args) {
+        System.out.println(areAnagram(List.of("ciao", "caio", "coia", "fahskdf")));
+    }
+
+private static boolean areAnagram(List<String> s) {
+    return s
+            .stream()
+            .map(AnagrammiFunzionali::anagram)
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.toSet()))
+            .size() == 1;
+}
+
+private static Map<Integer, Long> anagram(String input) {
+    return input
+            .chars()
+            .boxed()
+            .collect(Collectors.groupingBy(
+                    Function.identity(),
+                    Collectors.counting())
+            );
+}
+```
+
+In questo blocco di codice possiamo osservare che a partire da una lista di stringhe, generiamo uno stream al quale applichiamo un mapping basato sulla funzione `AnagrammiFunzionali::anagram`. 
+
+Questa funzione prende una stringa in input e genera in output una mappa dove si memorizza come chiave la codifica ASCII di ciascuna lettera e come valore il conteggio delle occorrenze. Nel dettaglio a partire dalla stringa in input applichiamo `chars` che restituisce un `IntStream` coi valori ASCII di ciascuna lettera. Successivamente chiamiamo `boxed` che wrappa lo stream di int in `Stream<Integer>`. Infine applichiamo la funzione `collect` sullo stream di interi appena ottenuto, dove andiamo a fare raggruppamento `Collectors.groupingBy`, in cui specifichiamo di usare come chiave il valore stesso (`Function.identity`) e come valore associato il conteggio delle occorrenze (`Collectors.counting`).
+
+Dopo aver applicato la map (che ricordiamo restituisce una mappa per ogni stringa dello stream, e quindi otteniamo uno `Stream<Map>`) applichiamo ancora una volta una collect per raggruppamento, dove usiamo come chiave il valore stesso e come valore un oggetto `Set` che si occupa di creare un set di elementi per cui se un elemento è già presente non verrà inserito due volte. Quindi se collect restituisce una Map dove la chiave è una mappa e il valore un set, otteniamo un `Map<Map,Set>`.
+
+Infine restituiamo il risultato di `size` applicato a una mappa, che restituisce la dimensione della mappa stessa (intesa come, quante coppie chiave:valore ci sono).
+
+Esempio di output applicato alle stringe indicate nel codice precedente:
+```java
+// CHIAVE 1: La mappa delle frequenze per "ciao" (e i suoi anagrammi)
+    {99=1, 105=1, 97=1, 111=1} = [
+        {99=1, 105=1, 97=1, 111=1}
+    ],
+
+    // CHIAVE 2: La mappa delle frequenze per "fahskdf"
+    {102=2, 97=1, 104=1, 115=1, 107=1, 100=1} = [
+        {102=2, 97=1, 104=1, 115=1, 107=1, 100=1}
+    ]
+
+```
+
+Il seguente blocco di codice replica quanto visto ma con uno stream di interi:
+```java
+List<Integer> nums = List.of(123, 34, 45, 55, 55, 55, 34);
+var s = nums
+    .stream()
+    .collect(Collectors.groupingBy(
+            Function.identity(),
+            Collectors.toList() // (toList per aggregare le liste)
+    ))
+    .values(); // stampa i valori associati a ogni chiave (ogni chiave ha una lista di valori associata)
+```
+
+Di seguito possiamo vedere come realizzare una generica funzione in Java tramite `Function`, una generica funzione che prende in input esattamente un valore e restituisce un solo output. Questa funzione viene definita e successivamente possiamo utilizzarla tramite il metodo `apply`. Il vantaggio di funzioni definite in primis e applicate solo all'occorrenza è proprio la lazy evaluation (una funzione viene definita ma eseguita solo all'occorrenza)
+```java
+Function<Persona, String> fnGetNome = x -> x.nome;
+String tizio = fnGetNome.apply(persone.getLast())
+```
+Un esempio di vantaggio per la lazy evaluation è quando operiamo con gli stream. Fin quando non eseguiamo operazioni terminali (`forEach` oppure `findFirst`), la funzione viene letta ma non eseguita. Inoltre se applichiamo per esempio una `filter`, successivamente un `map` e poi un `findFirst`, l'ottimizzatore di Java applica queste operazioni direttamente sul primo elemento, e se rispetta le condizioni, ignora l'esecuzione delle trasformazioni sugli elementi successivi:
+```java
+List<String> nomi = List.of("Al", "Bob", "Anna", "Claudio");
+
+String risultato = nomi.stream()
+    .filter(s -> s.startsWith("A"))
+    .map(s -> s.toUpperCase())
+    .findFirst() // <-- Operazione terminale
+    .orElse("");
+```
+
+Un altro esempio di funzione è `Supplier`, una function che ritorna un valore senza prenderne uno in ingresso.
+```java
+Supplier<String> getHello = () -> "Hello!";
+getHello.get();
+```
+Abbiamo poi `Predicate`, una function che prende in input esattamente un parametro e restitusice sempre un solo valore booleano.
+```java
+Predicate<Persona> isCliente = p -> p.codiceCliente != null;
+System.out.println(isCliente.test(persona1));
+```
+
+Abbiamo poi `Consumer`, una funzione che prende esattamente un solo input ma non restituisce nulla
+```java
+List<String> nomi = List.of("Marco", "Luca");
+
+// Esempio di Consumer che stampa
+Consumer<String> stampatore = s -> System.out.println("Ciao " + s);
+
+nomi.forEach(stampatore); 
+```
+
+Un altra funzione è `Comparator`, che si occupa di ricevere in ingresso due input dello stesso tipo e restituire un `int` per indicare chi viene prima:
+- intero positivo, il primo oggetto viene prima del secondo
+- zero, il primo oggetto e il secondo sono uguali in ordinamento
+- intero negativo, il primo oggetto viene dopo il secondo.
+
+Possiamo definirlo in modo esplicito, indicando la regola di comparazione (in questo caso indichiamo che presi due oggetti persona, la comparazione dev'essere eseguita sulla differenza delle età):
+```java
+Comparator<Persona> orderByAge = (o1, o2) -> o2.eta - o1.eta;
+```
+oppure in modo implicito, sfruttando il metodo `comparing` 
+
+```java
+Comparator<Persona> orderByAge2 = Comparator.comparing(Persona::age);
+//equivalente
+Comparator<Persona> orderByAge2 = Comparator.comparingInt(o -> o.eta);
+```
+E possiamo usare il comparatore per ordinare un array di oggetti Persona:
+```java
+Persona[] personas = {persona1,persona2};
+Arrays.sort(personas, orderByAge);
+```
+
+Importante indicare che su oggetti Stream possiamo invocare direttamente il metodo `sorted`, che però richiede che gli oggetti su cui si intende applicare l'ordinamento implementino l'interfaccia `Comparable` per cui bisogna necessariamente overridare il metodo `compareTo`.
+```java
+List<Persona> persone = List.of(persona1,persona2);
+var orderPersone = persone.stream()
+                .sorted()
+                .toList();
+System.out.println(orderPersone);
+```
+
+Oltre a `Comparator` e `Predicate` abbiamo anche alcuni metodi built-in degli stream, i metodi **XXXmatch**, i quali richiedono in input un predicato e restituisco un booleano:
+- `allMatch`: restituisce true se tutti gli elementi dello stream rispettano il predicato
+- `anyMatch`: restituisce true se almeno un elemento dello stream rispetta il predicato
+- `noneMatch`: restituisce true se nessun elemento dello stream rispetta il predicato
+Esempio:
+```java
+boolean almenoUnaPersonaHaIlCognomeTre = persone
+                .stream()
+                .noneMatch(x -> "tre".equalsIgnoreCase(x.cognome));
+```
+
+Nell'introduzione delle `Function`, abbiamo definito `fnGetNome`. Essa può essere utilizzata non solo tramite *apply* ma come funzione all'interno di alcuni metodi come il *groupingBy*:
+```java
+var byName = persone
+                .stream()
+                .collect(Collectors.groupingBy(
+                        fnGetNome,
+                        Collectors.toList()
+                ));
+```
