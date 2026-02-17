@@ -53,6 +53,10 @@ Da qui in poi useremo questa tabella per fare la join. Quindi ora si procede a p
 
 Le hash join hanno un vincolo importante, ovvero che le hash table sono allocate in memoria principale, e devo avere abbastanza memoria per storarla. Quindi solitamente si sceglie una *Build Table* a partire dalla piú piccola.
 
-La complessità è lineare, costo di costruzione della hash table $O(m)$ e costo della scansione dellla probe $O(n)$.
+La complessità è lineare, costo di costruzione della hash table $O(m)$ e costo della scansione dellla probe $O(n)$, quindi $O(m+n)$.
 
+Se non abbiamo sufficiente spazio in memoria per costruire una Hash table, possiamo andare a scrivere una parte di hash table su disco dove posso fare una lookup su disco (molto lento poiché si esegue un *random access* su disco). In questi casi quindi la Sort Merge risulta essere piú robusta. 
 
+Confronto tra le varie tecniche:
+
+![alt text](image-2.png)
