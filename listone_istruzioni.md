@@ -75,13 +75,14 @@ Guida rapida alla sintassi XPath per l'automazione con Selenium.
 
 | Sintassi / Esempio | Descrizione |
 | :--- | :--- |
-| `/` | **Root**: Parte dall'inizio assoluto del documento (nodo radice). |
-| `//` | **Ricerca Relativa**: Cerca l'elemento in tutta la pagina, a qualsiasi livello di profondità. |
+| `/` | **Root**: Parte dall'inizio assoluto del documento (nodo radice) oppure tra i figli del nodo. |
+| `//` | **Ricerca Relativa**: Cerca l'elemento in tutta la pagina, a qualsiasi livello di profondità. Nel caso di un nodo interno, cerca non solo tra i figli ma a qualsiasi livello di profondità. |
 | `//div` | Seleziona tutti gli elementi `div` presenti nel documento. |
 | `//div[@id='tabs-1']` | Seleziona i `div` che hanno esattamente l'attributo ID uguale a "tabs-1". |
 | `//*[@id='tabs-1']` | Seleziona **qualsiasi** tag (`*`) che abbia l'ID "tabs-1". |
 | `//*[@class='btn' and @method='post']` | **AND**: L'elemento deve soddisfare entrambi i requisiti contemporaneamente. |
 | `//*[@class='btn' or @method='post']` | **OR**: L'elemento viene selezionato se possiede almeno uno dei due attributi. |
+| `//*[text()]='Settings'` | Seleziona elementi in cui il testo è `'Settings'`. |
 | `//*[starts-with(@class, 'nav')]` | Seleziona elementi la cui classe **inizia** con "nav" (utile per ID/classi dinamiche). |
 | `//*[starts-with(text(), 'UserID : ')]` | Seleziona qualsiasi elemento (`*`) in tutta la pagina (`//`) il cui testo visibile inizia esattamente con la stringa `'UserID : '`|
 | `//*[contains(@class, 'ui-widget')]` | **Contiene**: Seleziona elementi la cui classe include la stringa specifica (ottimo per classi multiple). |

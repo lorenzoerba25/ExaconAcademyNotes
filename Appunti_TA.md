@@ -5,6 +5,7 @@
   - [Diario delle lezioni](#diario-delle-lezioni)
   - [Lezione 6/2/26](#lezione-6226)
   - [Lezione 12/2/26](#lezione-12226)
+  - [Lezione 18/2/26](#lezione-18226)
 
 
 ## Lezione 6/2/26
@@ -117,3 +118,36 @@ Con XPath ricordiamo che con un `/` indichiamo che vogliamo cercare in quella ro
 
 La prima soluzione prende il nome di **Full XPath**, solitamente utilizzato in caso di test generici che eseguiamo *una tantum*, in quanto è molto frequente che in un sito vi siano piccole variazioni. La seconda soluzione prende il nome generico di XPath. In entrambi i casi si scoraggia l'uso di XPath perchè risulta essere particolarmente lento (termini di milliseconi) durante la ricerca di un componente.
 
+## Lezione 18/2/26
+Continuiamo a vedere alcuni comandi attraverso XPath. Se volessimo cercare per esempio sulla base di un determinato attributo possiamo fare:
+```java
+driver.findElement(By.xpath("//*[@aria-label='value']"));
+```
+
+Se volessimo invece specificare che vogliamo uno specifico tag con quel tipo di attributo facciamo:
+```java
+driver.findElement(By.xpath("//button[@aria-label='value']"));
+```
+
+Come per il Full Xpath se vogliamo prendere un tag button che non ha attributi, id o classi, possiamo appoggiarci a cercare l'elemento padre e poi scendere di uno:
+```java
+driver.findElement(By.xpath("//div[@aria-label='value']/button"))
+//analogo
+driver.findElement(By.xpath("(//div[@aria-label='value']/button)[1]"))
+```
+
+Possiamo anche andare a cercare dei tag sulla base del testo, completo oppure parziale:
+```java
+driver.findElement(By.xpath("//div[text()]='Settings')"));
+//oppure
+driver.findElement(By.xpath("//div[contains(text(),'ettings')"));
+//oppure
+driver.findElement(By.xpath("//div[starts-with(text(),'Set')"));
+```
+
+Vediamo ora dei passaggi in più. Vogliamo cercare un certo bottone per cui esistono altri bottoni con lo stesso id. Potremmo cercare a partire dal padre come indicato prima, ma se supponiamo che abbiamo sempre più padri con lo stesso id, possiamo risalire ulteriormente la gerarchia.
+
+```java
+
+driver.findElement(By.xpath("//*[@id='prova'//*[@id='prova']"));
+```
