@@ -38,7 +38,7 @@ select *
 from (values('Lorenzo','Erba'), ('Nicolas','Liguori')) as tab_prova (cognome,nome)
 union
 select *
-from (values('Erba','Lorenzo'), ('Santi','Simone')) as tab_prova_2 
+from (values('Lorenzo','Erba'), ('Santi','Simone')) as tab_prova_2 
 ```
 
 Esempio di duplicati con `INTERSECT`:
