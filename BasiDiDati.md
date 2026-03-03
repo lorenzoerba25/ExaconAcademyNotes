@@ -4,6 +4,236 @@ All'interno di questo file markdown sono presenti appunti ed esercitazioni rigua
 ## Piccolo disclaimer
 Poichè posseggo una discreta conoscenza dei database relazionali e linguaggi di query, all'interno del file sono presenti solo informazioni che per me risultano nuove o poco chiare, per cui conviene tenerne traccia negli appunti.
 
+## Linguaggi di un DBMS
+Un DBMS supporta diversi tipi di linguaggi:
+- **Data Definition Language (DDL)**: permette di specificare e modificare lo schema della base di dati, lo schema delle viste e i vincoli di integrità. Agisce sul livello logico ed esterno.
+- **Data Manipulation Language (DML)**: permette di creare, modificare e interrogare l'istanza della basi di dati. Agise su livello logico ed esterno.
+- **Storage Definition Language (SDL)**: definisce lo schema fisico del DB. Agisce sul livello fisico.
+
+In sintesi possiamo affermare che **DDL** e **DML** sono linguaggi **CRUD**, ovvero quei linguaggi che supportano operazioni di:
+- Creation
+- Read
+- Update
+- Delete
+Entrambi agiscono allo stesso modo ma da punti di vista differenti:
+- il DML agisce sulle istanze delle relazioni, i dati veri e propri
+- il DDL agisce sullo schema delle relazioni, sulla "struttura"
+
+Fra i vari linguaggi di interrogazione uno dei più famosi è **SQL (Structured Query Language)** che fornisce un approccio di interrogazione dichiarativa, poichè in modo esplicito dichiariamo cosa vogliamo ottenere dall'interrogazione.
+SQL non è nato nè per la potenza computazionale ma per la potenza espressiva. Di fatti frài vari vantaggi troviamo:
+- facilità di utilizzo anche per utenti poco esperti
+- possibilità di attuare strategie di ottimizzazione (solitamente attuate dal DBMS che attua una serie di strategie per eseguire in modo ottimizzato le interrogazioni).
+
+## Tipi di dato
+
+Prima di introdurre il concetto di vincolo e le istruzioni SQL per DDL e DML elenchiamo velocemente i vari tipi di dato supportati nella maggior parte dei DBMS:
+- tipi caratterre: singoli caratteri, stringhe anche di lunghezza variabile
+- tipi numerici: interi, decimali
+- tipi temporali: date, ore, intervalli di tempo
+- booleani
+- BLOB,CLOB (Binary/Character Large Object): per grandi immagini e testi
+
+Un tipo particolare di dato è rappresentato dal valore nullo `NULL`. Molti DBMS supportano la possibilità di assegnare a qualsiasi *data-type* il valore `NULL`. Esso rappresenta un valore valido per ogni dominio in quanto non appartiene a un dominio preciso. La gestione dei valori `NULL` deve avvenire in modo dedicato e con cautela (per esempio confrontare `Matricola=NULL` risulta ambiguo).
+
+## Il concetto di vincolo
+
+All'interno di una relazione, come nella vita reale, possono essere indicati dei vincoli, delle regole (*constraints*), che devono essere rispettate da tutte le tuple che devono appartenere alla relazione. 
+
+Quando si ha a che fare con un DBMS, si parla di **vincoli di integrità**, condizioni che devono essere verificate da **ogni** istanza della base di dati, per esempio dominio degli attributi.
+
+Tra i vari vincoli di integrità abbiamo:
+- **vincoli di integrità intra-relazionale** che agiscono all'interno di una singola relazione
+- **vincoli di integrità di entità (chiave primaria)** che agiscono sull'istanza di una tabella garantendo che ogni tupla nel database sia univoca e identificabile
+- **vincoli di integrità inter-relazionale (referenziale)** che agiscono sul legame tra relazioni differenti.
+
+I **vincoli intra-relazionali** agiscono come regole di validazione interne a una singola tabella. Una tupla può essere inserita o mantenuta nella relazione solo se soddisfa tutti i vincoli imposti, garantendo così la correttezza atomica dei dati. Per esempio:
+- l'età deve essere un intero (vincolo di dominio)
+- il campo nome non può essere `NULL` (vincolo di colonna)
+- il prezzo di vendita dev'essere maggiore del prezzo di acquisto (vincolo di tupla)
+
+I **vincoli di chiave primaria** agiscono sull'intera tupla con una visione globale della relazione. Più precisamente consentono di specificare uno o più attributi come **chiave primaria** ovvero uno o più campi che identificano in modo univoco il record. Quindi per sua natura una chiave primaria non può assumere valori `NULL` e non ammette valori duplicati (per l'intera chiave) all'interno della stessa relazione. Per esempio:
+- uno studente è identificato dalla matricola
+- un paziente è identificato dal codice fiscale
+- la frequentazione di un corso è identificata dalla matricola dello studente e dall'identificativo del corso. 
+
+I **vincoli di integrità referenziale** agiscono sul legame tra relazioni, garantendo che io in una tabella possa inserire il valore di una chiave di un'altra tabella per evitare di inserire tutti i dati della tupla. Per esempio date le tabelle **Corsi** e **Docenti** io posso inserire nella relazione **Corsi** la matricola del docente, in modo da associare a ciascun corso l'identificativo del docente che lo sostiene. Per tanto realizziamo una correlazione logica tra le relazioni e il vincolo stabilisce che non può esistere una chiave, detta **chiave esterna**, che non esiste nella relazione in cui è chiave primaria (non posso aggiungere un corso sostenuto da un docente che non esiste nella tabella Docenti).
+
+
+## DDL
+Il DDL permette di definire e modificare lo schema delle relazioni, viste e definire vincoli di integrità. Per le prossime istruzioni useremo una notazione generica che consente di definire in modo generico la sintassi dei comandi SQL. Nel dettaglio useremo questa notazione:
+- caratteri maiuscoli per le parole chiave del linguaggio
+- `<>` indichiamo i nomi di variabili
+- `[]` indichiamo i componenti opzionali
+- `*` per indicare 0 o più occorrenze
+- `|` per indicare delle opzioni (si intende scegliere un elemento piuttosto che un altro)
+
+Il DDL utilizza le seguenti *keywords*:
+- per la creazione **CREATE**
+- per la modifica **ALTER**
+- per la cancellazione **DROP**
+- per l'interrogazione **SHOW**
+
+Per la creazione di una relazione si usa la seguente istruzione:
+```sql
+CREATE TABLE <nome relazione>
+(<specifica colonna> [,<specifica colonna>]*);
+```
+dove:
+- `<nome relazione>` è il nome della relazione che viene creata
+- `<specifica colonna>` è una specifica di colonna il cui formato è
+  - ```sql 
+    <nome colonna> <dominio> [DEFAULT <valore_default>]
+    ```
+dove:
+  - `<nome colonna>` è il nome della colonna (necessariamente divero dal nome delle altre colonne della relazione)
+  - `<dominio>` è il dominio della colonna, uno dei *data-type* SQL
+  - `<valore_default>` è un valore del dominio, assunto dalle tuple se nessun valore è specificato per la colonna
+
+Esempio:
+```sql
+CREATE TABLE Video(
+colloc DECIMAL(4),
+titolo VARCHAR(30),
+regista VARCHAR(20),
+tipo CHAR DEFAULT 'd');
+```
+
+Vediamo ora la definizione dei vincoli di integrità sulla tabella Video. In prima battuta vediamo la definizione di vincoli di colonna, per esempio il titolo e il regista non possono assumere valori di tipo `NULL`. In questo caso definiamo il campo come
+```sql
+CREATE TABLE Video(
+colloc DECIMAL(4),
+titolo VARCHAR(30) NOT NULL,
+regista VARCHAR(20) NOT NULL,
+tipo CHAR DEFAULT 'd');
+```
+
+Un altro tipo di vincolo di integrià è il vincolo di chiave, che possono essere:
+- `UNIQUE` chiave univoca, quindi simile alla chiave primaria, ma può assumere valori nulli
+- `PRIMARY KEY` chiave univoca che non può assumere valori nulli.
+In una relazione possiamo specificare più chiavi `UNIQUE` ma una sola `PRIMARY KEY`.
+
+La definizione di una chiave avviene direttamente sull'attributo con la seguente sintassi: 
+```sql
+<nome colonna> <dominio> [PRIMARY | [UNIQUE] KEY]
+```
+oppure dopo l'ultimo attributo, solitamente nel caso in cui abbiamo una chiave primaria composta poichè con la definizione *inline* è possibile definirla solo su un campo.
+
+```sql
+
+/*Esempio inline */
+CREATE TABLE Video(
+colloc DECIMAL(4) PRIMARY KEY,
+titolo VARCHAR(30) NOT NULL,
+regista VARCHAR(20) NOT NULL,
+tipo CHAR DEFAULT 'd');
+
+/*Esempio in coda */
+CREATE TABLE Video(
+colloc DECIMAL(4),
+titolo VARCHAR(30),
+regista VARCHAR(20),
+tipo CHAR DEFAULT 'd',
+PRIMARY KEY(titolo,regista));
+
+/*Esempio in coda con UNIQUE*/
+CREATE TABLE Noleggio
+(
+    colloc DECIMAL(4),
+    dataNol DATE DEFAULT CURRENT_DATE,
+    codCli DECIMAL(4) NOT NULL,
+    dataRest DATE,
+    PRIMARY KEY (colloc,dataNol)
+    UNIQUE (colloc,dataRest)
+
+);
+```
+
+Un altro tipo di vincolo è il vincolo di integrità referenziale, dove andiamo a definire una chiave esterna (**FOREIGN KEY**) sulla tabella riferita e che assume i valori della chiave primaria della tabella referente. Molto importante è che la chiave esterna abbia lo stesso dominio della chiave primaria a cui fa riferimento (non posso definire una chiave esterna stringa in riferimento a una chiave primaria numerica).
+
+La sintassi di definizione della chiave esterna è la seguente (inserita come ultima riga in `CREATE TABLE`):
+```sql
+FOREIGN KEY (<lista nomi colonne>) REFERENCES <nome relazione>
+    [ON DELETE {NO ACTION | CASCADE | SET NULL | SET DEFAULT}]
+    [ON UPDATE {NO ACTION | CASCADE | SET NULL | SET DEFAULT}]
+```
+
+In caso di una chiave esterna composta da un solo campo è possibile usare la notazione *inline*:
+```sql
+<nome attributo> <dominio> REFERENCES <nome relazione>
+```
+
+Per esempio:
+```sql
+CREATE TABLE Film(
+titolo VARCHAR(30),
+regista VARCHAR(20),
+anno DECIMAL(4) NOT NULL,
+genere CHAR(15) NOT NULL,
+valutaz NUMERIC(3,2),
+PRIMARY KEY(titolo,regista));
+
+CREATE TABLE Video(
+    colloc DECIMAL(4) PRIMARY KEY
+    titolo VARCHAR(30) NOT NULL,
+    regista VARCHAR(30) NOT NULL,
+    tipo CHAR NOT NULL DEFAULT 'd',
+    FOREIGN KEY (titolo,regista) REFERENCES Film
+);
+```
+
+![alt text](image-1.png)
+
+Esempio *inline*:
+```sql
+CREATE TABLE Cliente(
+    codCli DECIMAL(4) PRIAMRY KEY,
+    ...
+)
+
+CREATE TABLE Noleggio(
+    colloc DECIMAL(4) REFERENCES Video,
+    dataNol DATE DEFAULT CURRENT_DATE,
+    codCli DECIMAL(4) NOT NULL REFERENCES Cliente,
+    ...
+)
+```
+
+Nella clausola di **FOREIGN KEY** possiamo specificare dei comportamenti in caso di aggiornamento/cancellazione della chiave primaria che è usata come chiave esterna in una relazione:
+- `ON UPDATE` permette di specificare le azioni da eseguire nel caso di modifica del valore di chiave di una tupla riferita tramite chiave esterna
+- `ON DELETE` permette di specificare le azioni da eseguire nel caso di cancellazione di tuple nella tabella riferita tramite chiave esterna.
+In entrambi i casi abbiamo 4 opzioni disponibili:
+- `NO ACTION`: la cancellazione/modifica di una tupla dalla tabella riferita è eseguita solo se non esiste alcuna tupla nella tabella referente che fa riferimento alla tupla da cancellare
+- `CASCADE`:  la cancellazione/modifica di una tupla dalla tabella riferita implica la cancellazione/modifica di tutte le tuple della tabella referente che fanno riferimento alla tupla da cancellare/modificare
+- `SET NULL`: la cancellazione/modifica di una tupla dalla tabella riferita implica che in tutte le tuple della tabella referente che fanno riferimento alla tupla da cancellare/modificare, la chiave esterna viene posta a valore `NULL` (se ammesso)
+- `SET DEFAULT`: la cancellazione/modifica di una tupla dalla tabella riferita implica che in tutte le tuple della tabella referente che fanno riferimento alla tupla da cancellare/modificare, la chiave esterna viene posta uguale al valore did efault specificato nel comando di CREATE TABLE.
+
+In entrambi i casi, se omessa la modalitàm, di default si imposta `NO ACTION` per entrambi i casi. Non esiste una combinazione corretta o errata, dipende sempre dai vari casi di utilizzo ma la più utilizzata è `ON UPDATE CASCADE ON DELETE NO ACTION`.\
+
+Infine l'ultimo vincolo di integrità definibile sul costrutto `CREATE TABLE` è il vincolo di tipo `CHECK` che consente di specificare condizioni di validità su una colonna o relazione.
+
+Vincoli **CHECK su colonna** sono definiti come:
+```sql
+<nome attributo> <dominio> CHECK (query)
+```
+Ad esempio:
+```sql
+CREATE TABLE Film(..., 
+    valutaz DECIMAL (3,2) CHECK (valutaz BETWEEN 0.00 AND 5.00),
+    ...
+);
+```
+Vincoli **CHECK su tabella** sono definiti alla fine dell'istruzione `CREATE TABLE`:
+```sql
+CREATE TABLE Film(
+    ...,
+    CHECK(dataRest >= dataNol)
+);
+```
+
+Il vincolo CHECK deve sempre restituire `True/False` e viene invocato in caso di inserimento/aggiornamento e nel caso positivo, il record viene aggiunto/aggiornato, nel caso negativo non viene inserito/aggiornato.
+
+
+
 ## Operatori insiemistici
 `UNION`,`INTERSECT` e `EXCEPT`.
 
@@ -412,7 +642,7 @@ WHERE f1.budget >= ALL (
     SELECT f2.budget FROM film f2 WHERE f2.anno = f1.anno
 )
 ```
-Importante notare che qua usiamo `>= ALL` in quanto se due film hanno lo stesso budget questa query li restituisce entrambi. Se avessimo inserito `> ALL` invece avremmo dovuto in primis escludere lo stesso film, altrimenti non sarebbe mai possiible essere maggiori di sè stessi, e inoltre a parità di budget non avremmo nessuno dei due film. Una via più leggibile è attraverso `MAX` evitando oltretutto l'autoconfronto
+Importante notare che qua usiamo `>= ALL` in quanto se due film hanno lo stesso budget questa query li restituisce entrambi. Se avessimo inserito `> ALL` invece avremmo dovuto in primis escludere lo stesso film, altrimenti non sarebbe mai possiible essere maggiori di sè stessi, e inoltre a parità di budget non avremmo nessuno dei due film. Una via più leggibile è attraverso `MAX` evitando oltretutto l'autoconfronto.
 ```sql
 --equilvanete
 SELECT f1.titolo, f1.budget, f1.anno
