@@ -211,3 +211,37 @@ In presenza di *hint*, ovvero strategie che noi forniamo a Spark per la scelta d
 4. Forniamo un *hint* per applicazione della Shuffle and Replicate Nested Loop allora si esegue una  **Shuffle and Replicate Nested Loop**
 
 Quanto visto vale per join di tipo *equi-join*. Nel caso in cui abbiamo qualcosa che non sia una *equi-join*, andiamo a scegliere solo tra Broadcast Hash Join e Shuffle and Replicate Nested Loop in quanto Shuffle Hash, Sort Merge e Broadcast Nested Loop non sono applicabili.
+
+## Lezione 02/03/26 - File Parquet
+
+Il formato Parquet è il formato di default di Spark. Se ipotizziamo di avere una rappresentazione tabellare di alcuni dati.
+| A   | B  |
+| ------ | ----- |
+| A1 | B1 |
+| A2 | B2 |
+| A3 | B3 |
+| A4 | B4 |
+| A5 | B5 |
+
+Solitamente abbiamo due tipologie di memorizzazione (*storage*) per questo tipo di rappresentazione:
+- storage per riga (usato per esempio nei file CSV). Lo svantaggio è che non possiamo eseguire grandi compressioni.
+Ad esempio:
+
+| A1 | B1 | | A2 | B2 || A3 | B3 || A4 | B4 || A5 | B5 |
+- storage per colonna, organizzato secondo *chunk* di colonne. Il **vantaggio** è che ogni chunk è composto da dati omogenei quindi possiamo comprimere e salvare spazio. Altro vantaggio sono logiche di ottimizzazione come il *push-down* dei predicati ovverop possiamo ridurre il numero di informazioni lette dal file (per esempio quando vogliamo calcolare la media degli stipendi, leggiamo solo la colonna stipendi). Un altro vantaggio è il *push-down* della selezione, ovvero se voglio solo certe colonne non dovrò leggere tutte le informazioni.
+Ad esempio:
+
+| A1 | A2 | A3 | A4 | A5 || B1 | B2 | B3 | B4 | B5 |
+
+Un file parquet segue una struttura a blocchi.
+- In cima al file è presente un **header** che contiene una sequenza di byte che identifica il file come tipo Parquet (chiamata *magic number*).
+- Dopo l'header segue un blocco, il **body**, dove sono contenuti i vari i dati, che a sua volta segue un'organizzazione precisa:
+  - sono presenti una serie di **row-group** che è una partizione orizzontale dei dati (un insieme di righe relativa a una o più colonne)
+  - ogni colonna è composta da una serie di **page** che rappresentano l'unità elementare del file (non scomponibile ma può contenere più valori)
+- Infine in fondo al file abbiamo un **footer** che contiene i metadati (dati sui dati) ovvero informazioni relative a ciò che contiene il nostro file (versione del formato, lo schema dei dati, metadati delle colonne come il numero di colonne, il numero di record delle colonne, il formato di compressione dei dati, metadati delle pagine etc...)
+- A chiudere il file è presente il *magic-number* come nell'header.
+
+![alt text](image-15.png)
+
+A differenza di un file CSV in un file Parquet possiamo sfruttare la presenza dello schema codificato nei metadata che può evolvere, in quanto i metadati del file Parquet si aggiornano di conseguenza. 
+
