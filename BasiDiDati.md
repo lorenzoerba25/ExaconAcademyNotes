@@ -532,6 +532,10 @@ WHERE data_noleggio >= '2025-01-01')
 
 Analogamente a `IN` esiste l'operatore `NOT IN` che inverte il risultato ottenuto dall'applicazione di `IN`.
 
+Importante la gestione dei valori `NULL` con l'operatore `IN`. Distinguiamo due casi:
+- il primo caso è quando abbiamo `NULL` al primo membro e lo confrontiamo con un insieme di valori non nulli, il confronto ci restituirà `NULL`
+- il secondo caso è quando abbiamo `NULL` al secondo membro e lo confrontiamo con un primo membro che non è nullo. In questo caso la gestione dei nulli è ottimizzata poichè vengono lasciati per ultimi i confronti con `NULL` cercando prima un match con valori non nulli. Se ciò non dovesse accadere si passa a confrontare il `NULL`
+
 Introduciamo ora l'operatore `ALL`, il quale viene sempre utilizzato nella forma `expression operator ALL (subquery)`, per esempio `anno < ALL (subquery)`. L'operatore `ALL` dev'essere sempre preceduto da un operatore di confronto (`<,>,<>,>=, <=, ='`) e seguito da una subquery racchiusa tra parentesi tonde. Il funzionamento è semplice:
 - `ALL` restituisce true se l'espressione di confronto è vera per ogni valore restituito dalla subquery
 - `ALL` restituisce false se esiste almeno un record della sottoquery che non soddisfa la condizione (basta un solo record che non soddisfa la condizione).
@@ -554,7 +558,7 @@ Vediamo invece l'operatore `ANY`. Questo predicato viene utilizzato nella forma 
 - true se l'espressione di confronto è vera per almeno un valore restituito dalla subquery
 - false se l'espressione di confronto è falsa per tutti i valori restituiti dalla subquery.
 
-Se la sotto-interrogazione è vuota (nessun risultato restituito), `ALL` restituisce false.
+Se la sotto-interrogazione è vuota (nessun risultato restituito), `ANY` restituisce false.
 
 In questo caso, per ogni persona valutata nella query esterna, controllo che la provincia di residenza sia **una qualsiasi** provincia della Lombardia. Perciò se quella persona risiede in una provincia della Lombardia, quel record viene prelevato altrimenti se la sua provincia di residenza non compare tra quelle lombarde, il record non viene preso.
 ```sql
