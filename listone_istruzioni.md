@@ -280,7 +280,7 @@ df_employees_err.show(10)
 +---+----------+---------+---------+----------+-------+----+
 ```
 
-### Metodi dei Dataframe
+## Metodi dei Dataframe
 
 Il metodo `count` restituisce il numero di record nel dataframe:
 
@@ -362,7 +362,7 @@ df_employees.describe().show()
 +-------+----------------+----------+---------+------------------+----------+-----------------+-----------------+
 ```
 
-### Selezione delle colonne dei Dataframe
+## Selezione delle colonne dei Dataframe
 
 Una colonna può essere selezionata tramite *dot-notation* o tramite *brackets* dove entrambi restituiscono un oggetto di tipo colonna:
 
@@ -580,4 +580,416 @@ df_employees.select("JOB").distinct().show(5)
 |  AC_MGR|
 | AD_PRES|
 +--------+
+```
+
+## Modificare o creare una colonna
+
+Per modificare una colonna, nome e/o valori, utilizziamo il metodo `withColumn` che richiede due parametri:
+- nome della nuova colonna o di quella da sovrascrivere
+- oggetto di tipo colonna che rappresenta il valore da sovrascrivere
+
+```python
+# aumento del 5% il salario degli impiegati
+df_employees_mod = df_employees.withColumn("SALARY", df_employees["SALARY"]*1.05)
+df_employees_mod.show(5)
+
+#Output:
+
++---+----------+---------+---------+-------+-------+----+
+| ID|FIRST_NAME|LAST_NAME|HIRE_DATE|    JOB| SALARY|DEPT|
++---+----------+---------+---------+-------+-------+----+
+|100|    Steven|     King|     1987|AD_PRES|25200.0|  90|
+|101|     Neena|  Kochhar|     1989|  AD_VP|17850.0|  90|
+|102|       Lex|   DeHaan|     1993|  AD_VP|17850.0|  90|
+|103| Alexander|   Hunold|     1990|IT_PROG| 9450.0|  60|
+|104|     Bruce|    Ernst|     1991|IT_PROG| 6300.0|  60|
++---+----------+---------+---------+-------+-------+----+
+```
+
+Attraverso il metodo `cast` possiamo fissare il datatype della colonna.
+```python
+df_employees_mod = df_employees.withColumn("SALARY", (df_employees["SALARY"]*1.05).cast("float"))
+```
+
+A volte però risulta utile modificare i valori di una colonna solo se si verificano alcune condizioni. In questo caso usiamo in combinazione a `withColumn` il metodo `when`, potenzialmente in cascata ed eventualmente alla fine `otherwise`, che richiede 2 parametri in input:
+- condizione che voglio soddisfare
+- valore che voglio attribuire se la condizione è vera (se falsa inserisce `null`)
+```python
+df_level = df_employees.withColumn("LEVEL", when(df_employees["SALARY"] < 5000, 1)\
+    .when((df_employees["SALARY"] >= 5000) & (df_employees["SALARY"] <= 15000), 2)\
+    .otherwise(3))
+```
+## Filtrare il contenuto di una colonna
+
+Un primo metodo che consente di fare un filtraggio del contenuto di una colonna è il metodo `filter` che come argomento richiede solamente la condizione di filtraggio:
+```python
+df_level.filter(df_level["JOB"] == 'IT_PROG').show(5)
+
+#Output:
+
++---+----------+---------+---------+-------+------+----+-----+
+| ID|FIRST_NAME|LAST_NAME|HIRE_DATE|    JOB|SALARY|DEPT|LEVEL|
++---+----------+---------+---------+-------+------+----+-----+
+|103| Alexander|   Hunold|     1990|IT_PROG|9000.0|  60|    2|
+|104|     Bruce|    Ernst|     1991|IT_PROG|6000.0|  60|    2|
+|105|     David|   Austin|     1997|IT_PROG|4800.0|  60|    1|
+|106|     Valli|Pataballa|     1998|IT_PROG|4800.0|  60|    1|
+|107|     Diana|  Lorentz|     1999|IT_PROG|4200.0|  60|    1|
++---+----------+---------+---------+-------+------+----+-----+
+```
+
+Un secondo metodo è il metodo `where`, simile al precedente:
+```python
+df_level.where(df_level["JOB"] == 'IT_PROG')
+```
+
+Possiamo inoltre indicare condizioni composte attraverso la logica booleana, `|, &, ~`:
+```python
+# per negare una condizione metti ~ davanti alla condizione da negare
+df_level.where((df_level["JOB"] == "IT_PROG") & ~(df_level["HIRE_DATE"]==1997))
+```
+
+Il metodo `isin` opera in modo del tutto analogo all'operatore `IN` di SQL:
+```python
+df_level.filter((df_level["DEPT"].isin([10, 20, 30])) | (df_level["LEVEL"] > 2))
+```
+
+Infine abbiamo i metodi `like` (case sensitive) e `ilike` (case insensitive) per verificare se c'è match tra due stringhe. La logica è analoga a `LIKE` in SQL con le wildcard `%, _`:
+```python
+# "MK%" ----> una stringa che inizia con MK e poi ha altri caratteri
+df_level.where(df_level["JOB"].like("MK%"))
+
+# ilike non è case sensitive 
+df_level.where(df_level["JOB"].ilike("mk%"))
+
+# "mk_" ----> una stringa che inizia con MK o mk e poi ha un solo carattere dopo
+
+df_level.where(df_level["JOB"].ilike("mk_"))
+```
+
+## Aggregazione 
+
+Un primo approccio di aggregazione può avvenire usando funzioni di aggregazione senza raggruppamento, direttamente in una select:
+```python
+df_employees.select(sum("SALARY")).show(5)
+
+# Output:
++-----------+
+|sum(SALARY)|
++-----------+
+|   691600.0|
++-----------+
+```
+
+Un secondo approccio, più comune, è quello di raggruppare prima e poi applicare le funzioni di aggregazione attraverso il metodo `groupBy` che restituisce un oggetto di tipo `GroupedData`:
+```python
+df_employees.groupBy("DEPT").sum("SALARY").show(5)
+
+# Outptut:
+
++----+-----------+
+|DEPT|sum(SALARY)|
++----+-----------+
+|  70|    10000.0|
+|  10|     4400.0|
+|  80|   311700.0|
+|  50|   156400.0|
+|  20|    19000.0|
++----+-----------+
+
+# Se omettiamo la colonna in sum() calcola la somma per ogni colonna
+df_employees.groupBy("DEPT").sum().show(5)
+
+# Output:
++----+-------+--------------+-----------+---------+
+|DEPT|sum(ID)|sum(HIRE_DATE)|sum(SALARY)|sum(DEPT)|
++----+-------+--------------+-----------+---------+
+|  70|    204|          1994|    10000.0|       70|
+|  10|    200|          1987|     4400.0|       10|
+|  80|   5670|         69930|   311700.0|     2800|
+|  50|   7090|         89898|   156400.0|     2250|
+|  20|    403|          3993|    19000.0|       40|
++----+-------+--------------+-----------+---------+
+```
+
+Elenchiamo di seguito alcuni esempi di funzioni di aggregazione:
+```python
+df_employees.groupBy("DEPT").sum("SALARY").show(3)
+df_employees.groupBy("DEPT").min("SALARY").show(3)
+df_employees.groupBy("DEPT").max("SALARY").show(3)
+df_employees.groupBy("DEPT").mean("SALARY").show(3)
+df_employees.groupBy("DEPT").count().show(3)
+# Max su più colonne
+df_employees.groupBy("DEPT").max("SALARY", "HIRE_DATE")
+```
+
+È possibile inoltre averèuna chiave di aggregazione composta specificando più colonne in `groupBy`:
+```python
+df_employees.groupBy("DEPT", "JOB").count().show(5)
+
+# Output:
++----+----------+-----+
+|DEPT|       JOB|count|
++----+----------+-----+
+|  80|    SA_MAN|    5|
+|  60|   IT_PROG|    5|
+| 100|FI_ACCOUNT|    5|
+|  80|    SA_REP|   30|
+|  10|   AD_ASST|    1|
++----+----------+-----+
+```
+
+Importante notare che se chiamiamo `count` su un oggetto `GroupedData` otteniamo un nuovo dataframe (eseguiamo una trasformazione) mentre se la eseguiamo su un dataframe otteniamo un numero (eseguiamo un'azione).
+```python
+print(type(df_employees.groupBy("DEPT", "JOB").count()))
+print(type(df_employees.count()))
+
+# Output:
+
+<class 'pyspark.sql.connect.dataframe.DataFrame'>
+<class 'int'>
+```
+
+Esempio di applicazione di tutti i metodi:
+```python
+# facciamo numerica per i job del dipartimento 80
+df_employees.groupBy("DEPT", "JOB").count().filter(df_employees["DEPT"] == 80).show(5)
+
+# Output:
++----+------+-----+
+|DEPT|   JOB|count|
++----+------+-----+
+|  80|SA_MAN|    5|
+|  80|SA_REP|   30|
++----+------+-----+
+```
+
+Molto importante è il metodo `col` che permette di specificare una colonna del dataframe ma a differenza della *dot-notation* o *brackets-notation* restituisce un oggetto di tipo `Column` con il nome della colonna passata (colonna che deve esistere). Per esempio se vogliamo filtrare su una colonna `"count"` generata dal conteggio, ```df_employees.groupBy("DEPT", "JOB").count().filter(df_employees["count"] > 5)``` produce errore in quanto la colonna `"count"` nel dataframe non esiste. Possiamo risolvere il problema in due modi:
+1. assegnare un nome al dataframe che otteniamo dopo la trasformazione prodotta da `count`
+2. usare il costrutto `col`
+```python
+from pyspark.sql.functions import col
+
+# Metodo 1
+df_employees_with_count = df_employees.groupBy("DEPT", "JOB").count()
+df_employees_with_count.filter(df_employees_with_count["count"] > 5).show(5)
+
+# Metodo 2
+df_employees.groupBy("DEPT", "JOB").count().filter(col("count") > 5).show(5)
+
+# Output:
++----+--------+-----+
+|DEPT|     JOB|count|
++----+--------+-----+
+|  50|SH_CLERK|   20|
+|  80|  SA_REP|   30|
+|  50|ST_CLERK|   20|
++----+--------+-----+
+```
+
+Fino ad ora abbiamo visto funzioni di aggregazione applicate singolarmente e in modo separato fra di loro. È possibile calcolare diversi tipi di aggregazione rispetto alla stessa chiave di raggruppamento tramite il metodo `agg` il quale supporta due approcci:
+1. Usare un dizionario del tipo (colonna su cui calcolare l'aggreggato, funzione di aggregazione)
+2. Passare come parametri le funzioni di aggregazione come `funzione("colonna")` precedentemente importate
+
+```python
+# Metodo 1
+df_employees.groupBy("DEPT", "JOB").agg({"SALARY":"max", "*":"count"}).show(5)
+
+# Metodo 2 con rinominazione delle colonne (opzionale)
+df_employees.groupBy("DEPT", "JOB").agg(max("SALARY").alias("MAX_SALARY"), count("*").alias("COUNT")).show(5)
+```
+
+## Rinominare una colonna
+Per rinominare una o più colonne di un dataframe possiamo usare uno dei seguenti metodi:
+- `withColumnRenamed` che richiede in input due parametri
+  - nome della vecchia colonna
+  - nome della nuova colonna
+- `withColumnsRenamed` che richiede in input un set di nomi con un pattern `{vecchia_colonna1, nuova_colonna1, vecchia_colonna2, nuova_colonna2 ...}`
+- `alias` utilizzato solitamente nell'istruzione `select`
+- `selectExpr` dove specifichiamo le colonne da rinominare con sintassi `AS` di SQL.
+
+```python
+df_employees.withColumnRenamed("HIRE_DATE", "HIRE_YEAR").show(3)
+
+df_employees.withColumnsRenamed({"HIRE_DATE":"HIRE_YEAR", "JOB":"JOB_ID"}).show(3)
+
+df_employees.select(col("HIRE_DATE").alias("HIRE_YEAR")).show(3)
+
+df_rename.selectExpr("_c0 as ID", "_c1 as FIRST_NAME").show(3)
+
+```
+
+In `selectExpr` possiamo indicare qualsiasi istruzione SQL Like prestando attenzione ad alcuni aspetti. Quando una colonna per esempio si chiama `"max(SALARY)"` nella selectExpr non possiamo indicare `max(SALARY)` in quanto la interpreta come una funzione max sulla colonna SALARY. Per evidenziarla come testo andiamo a usare i backtick in questo modo:
+```python
+df_rename = df_employees.groupBy("DEPT", "JOB").agg({"SALARY":"max", "*":"count"})
+df_rename.show(1)
+
+# Output:
++----+--------+-----------+--------+
+|DEPT|     JOB|max(SALARY)|count(1)|
++----+--------+-----------+--------+
+|  30|PU_CLERK|     3100.0|       5|
++----+--------+-----------+--------+
+
+# DA' ERRORE, anche con singoli apici ' '
+#df_rename.selectExpr("DEPT", "JOB", "max(SALARY) as MAX_SALARY", "count(*) as COUNT").show(5)
+df_rename.selectExpr("DEPT", "JOB", "`max(SALARY)` as MAX_SALARY", "`count(1)` as COUNT").show(5)
+
+# Output:
+
++----+--------+----------+-----+
+|DEPT|     JOB|MAX_SALARY|COUNT|
++----+--------+----------+-----+
+|  30|PU_CLERK|    3100.0|    5|
+|  60| IT_PROG|    9000.0|    5|
+|  50|SH_CLERK|    4200.0|   20|
+|  70|  PR_REP|   10000.0|    1|
+|  20|  MK_REP|    6000.0|    1|
++----+--------+----------+-----+
+```
+
+Un altro esempio di espressioni SQL Like che possiamo usare:
+```python
+df_schema = df_employees.selectExpr("ID", "SALARY * 1.05 as SALARY", "upper('last_NAME') as LAST_NAME", "current_timestamp() as TIMESTAMP")
+df_schema.show(5)
+
+# Output:
++---+-------+---------+--------------------+
+| ID| SALARY|LAST_NAME|           TIMESTAMP|
++---+-------+---------+--------------------+
+|100|25200.0|LAST_NAME|2026-01-21 22:21:...|
+|101|17850.0|LAST_NAME|2026-01-21 22:21:...|
+|102|17850.0|LAST_NAME|2026-01-21 22:21:...|
+|103| 9450.0|LAST_NAME|2026-01-21 22:21:...|
+|104| 6300.0|LAST_NAME|2026-01-21 22:21:...|
++---+-------+---------+--------------------+
+```
+
+## Ordinamento di un dataframe
+Come in SQL anche in Spark possiamo ordinare un dataframe su una o più colonne grazie al metodo `orderBy` che richiede due argomenti:
+1. colonna su cui applicare l'ordinamento
+2. tipo di ordinamento `ascending=False` oppure `ascending=True`
+
+```python
+df_employees.orderBy("HIRE_DATE", ascending=False).show(5)
+
+# Output:
++---+----------+----------+---------+--------+-------+----+
+| ID|FIRST_NAME| LAST_NAME|HIRE_DATE|     JOB| SALARY|DEPT|
++---+----------+----------+---------+--------+-------+----+
+|136|     Hazel|Philtanker|     2000|ST_CLERK| 2200.0|  50|
+|165|     David|       Lee|     2000|  SA_REP| 6800.0|  80|
+|149|     Eleni|   Zlotkey|     2000|  SA_MAN|10500.0|  80|
+|128|    Steven|    Markle|     2000|ST_CLERK| 2200.0|  50|
+|164|    Mattea|   Marvins|     2000|  SA_REP| 7200.0|  80|
++---+----------+----------+---------+--------+-------+----+
+```
+
+Per ordinare su più colonne abbiamo vari modi:
+1. utilizzare una lista di nomi di colonne e una lista di booleani per i relativi ordinamenti
+2. utilizzare oggetti di tipo colonna (tramite `col` o direttamente dal dataframe) a cui si applica la funzione `desc` o `asc`
+3. utilizare una lista di colonne identificate tramite indice
+
+```python
+# 1.
+# ordino per data e poi salario
+df_employees.orderBy(["HIRE_DATE", "SALARY"], ascending=[False, True]).show(5)
+
+# 2. 
+from pyspark.sql.functions import col
+df_employees.orderBy(col("HIRE_DATE").asc(), col("SALARY")).show(5)
+
+# 3.
+# ordino per nome e cognome
+df_employees.orderBy([2,3]).show(5)
+```
+
+## Concatenazione e gestione dei letterali
+È possibile definire nuove colonne nel dataframe come concatenazione di altre colonne tramite i metodi `concat, lit, concat_ws`. Nel dettagio:
+- `lit` restituisce un oggetto di tipo `Column` con valore costante
+- `concat` permette di concatenare le colonne passate come parametro, quindi richiede solo oggetti di tipo colonna
+- `concat_ws` permette di concatenare le colonne passate come parametro con un separatore costante
+
+```python
+from pyspark.sql.functions import lit, concat, concat_ws, when, count
+df_employees.withColumn("FULL_NAME", concat(col("FIRST_NAME"), lit(" "), col("LAST_NAME"))).show(5)
+
+df_employees.withColumn("FULL_NAME", concat_ws(" ", col("FIRST_NAME"), col("LAST_NAME"))).show(5)
+
+# Output:
++---+----------+---------+---------+-------+-------+----+----------------+
+| ID|FIRST_NAME|LAST_NAME|HIRE_DATE|    JOB| SALARY|DEPT|       FULL_NAME|
++---+----------+---------+---------+-------+-------+----+----------------+
+|100|    Steven|     King|     1987|AD_PRES|24000.0|  90|     Steven King|
+|101|     Neena|  Kochhar|     1989|  AD_VP|17000.0|  90|   Neena Kochhar|
+|102|       Lex|   DeHaan|     1993|  AD_VP|17000.0|  90|      Lex DeHaan|
+|103| Alexander|   Hunold|     1990|IT_PROG| 9000.0|  60|Alexander Hunold|
+|104|     Bruce|    Ernst|     1991|IT_PROG| 6000.0|  60|     Bruce Ernst|
++---+----------+---------+---------+-------+-------+----+----------------+
+```
+## Gestione dei null
+Per la gestione dei valori `NULL` nel dataframe possiamo utilizziamo principalmente due metodi:
+- `dropna` che permette di scartare i record con valori null e richiede due argomenti:
+  1. modalità di rimozione (`any` scarta i record che hanno almeno una colonna con `null`, `all` scarta i record che hanno tutte le colonne nulle)
+  2. subset di colonne su cui vogliamo considerare i null `subset=[...]`
+
+```python
+df_na.dropna("all").show(10)
+df_na.dropna("any").show(10)
+df_na.dropna("any", subset=["TEST_NA"]).show(10)
+```
+
+- `fillna` che permette di attribuire un valore specifico a tutti i `null` e abbiamo tre modalità
+  1. passiamo come argomento un unico valore che viene utilizzato come sostituto di tutti i `null`
+  2. utilizziamo il metodo 1. a cui passiamo un subset come parametro opzionale per specificare le colonne su cui agire
+  3. utilizzare un dizionario come parametro dove specifichiamo come chiave la colonna su cui agire e come valore il valore di filling
+```python
+#1.
+df_na.fillna(100).show(10)
+
+#2.
+df_na.fillna(100, subset=["TEST_NA"]).show(10)
+
+#3.
+df_na.fillna({"TEST_NA":100, "TEST2_NA": 111}).show(10)
+```
+
+Un altro metodo è `replace`, utlizzato non solo per sostituire i valori `null` ma anche valori generici. Il metodo `replace` richiede tre argomenti:
+1. valore o lista di valori da rimpiazzare
+2. valore o listàdi valori che rimpiazzano
+3. subset opzionale dove indichiamo le colonne su cui fare la replace
+
+```python
+df_na.replace(1, 500).show(10)
+
+# attenzione: es così rischi di rimpiazzare anche l'ID (quindi meglio specificare anche dove)
+df_na.replace(100, 500).show(10)
+
+df_na.replace(1, 500, subset=["TEST_NA"]).show(10)  # METODO MIGLIORE
+```
+
+Altro esempio:
+```python
+# nella colonna dept sostituisco 50 e 60 con 120 (quindi mappo due valori in uno stesso)
+df_na.replace([50, 60], 120, "DEPT").show(10)
+
+# sostituisco 90 con 60 e 120 con 130 
+df_na.replace([90, 60], [120, 130], "DEPT").show(10)
+```
+
+## Gestione dei duplicati
+
+Per verificare se ci sono record duplicati (record identici) e capire quali sono possiamo fare un raggruppamento su tutte le colonne, applicare un conteggio e filtrare la dove il counter è maggiore di 1:
+```python
+df_na.groupBy(df_na.columns).agg(count("*").alias("count")).filter("count > 1").show()
+```
+
+Infine possiamo applicare il metodo `dropDuplicates` o il metodo `distinct` dove entrambi restituiscono il dataframe pulito. Inoltre è possibile specificare una o più colonne su cui cercare i duplicati e scartarli:
+```python
+df_pulito = df_na.dropDuplicates()
+#equivalente
+df_pulito = df_na.distinct()
+
+# considero record duplicati se hanno id e department uguale
+df_pulito = df_na.dropDuplicates(["ID", "DEPT"])
 ```
