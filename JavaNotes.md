@@ -877,3 +877,21 @@ strSupplier.whenComplete((res, ex) -> {
         });
 ```
 
+## Design pattern
+I design pattern in informatica rappresentano una collezione di soluzioni e stili adottabili per risolvere problemi ricorrenti e fornire una versione "standardizzata" ed efficiente del design di un componente (indipendentemente che sia una classe, un'architettura di rete o altri elementi in ambito IT).
+
+Prima di introdurre i vari *design pattern* più utilizzati, è importante sottolineare che indipendentemente dalla loro applicazione è consigliato adottare uno stile di programmazione che segua il principio **SOLID**:
+- **Single Responsibility**. Una classe deve avere un solo compito. Se una classe gestisce sia la gestione dei pagamenti che la comunicazione col database non va bene, meglio dividerla in due.
+- **Open-Closed**. Le classi devono essere aperte alle estensioni (nuove funzionalità) ma chiuse alle modifiche. Si ottiene usando interfacce e polimorfismo invece di modificare il codice esistente.
+- **Liskov Substitution**. Una sottoclasse deve poter sostituire la sua classe base senza rompere il programma. Se `Quadrato` estende `Rettangolo` ma ne altera il comportamento logico, stai violando questo principio.
+- **Interface Segregation**. Un'interfaccia non dovrebbe costringere una classe a implementare metodi che non le servono. Meglio avere tante interfacce piccole che una interfaccia grande che contiene tutti i metodi.
+
+## Design pattern
+I design pattern in informatica rappresentano una collezione di soluzioni e stili adottabili per risolvere problemi ricorrenti e fornire una versione "standardizzata" ed efficiente del design di un componente (indipendentemente che sia una classe, un'architettura di rete o altri elementi in ambito IT).
+
+Prima di introdurre i vari *design pattern* più utilizzati, è importante sottolineare che indipendentemente dalla loro applicazione è consigliato adottare uno stile di programmazione che segua il principio **SOLID**:
+- **Single Responsibility**. Una classe deve avere un solo compito. Se una classe gestisce sia la gestione dei pagamenti che la comunicazione col database non va bene, meglio dividerla in due.
+- **Open-Closed**. Le classi devono essere aperte alle estensioni (nuove funzionalità) ma chiuse alle modifiche. Si ottiene usando interfacce e polimorfismo invece di modificare il codice esistente.
+- **Liskov Substitution**. Una sottoclasse deve poter sostituire la sua classe base senza rompere il programma. Se `Quadrato` estende `Rettangolo` ma ne altera il comportamento logico, stai violando questo principio.
+- **Interface Segregation**. Un'interfaccia non dovrebbe costringere una classe a implementare metodi che non le servono. Meglio avere tante interfacce piccole che una interfaccia grande che contiene tutti i metodi.
+- **Dependency Inversion**. Bisogna dipendere dalle astrazioni (interfacce), non dalle implementazioni concrete. Questo rende il codice facilmente testabile e modulare.
