@@ -993,3 +993,44 @@ df_pulito = df_na.distinct()
 # considero record duplicati se hanno id e department uguale
 df_pulito = df_na.dropDuplicates(["ID", "DEPT"])
 ```
+
+
+## Join in Spark
+Esempio di `INNER JOIN`:
+```python
+df_air_data = df_air_quality.join(df_sensors, "idsensore", how="inner")
+
+# Se le chiavi di join sono diverse avremmo dovuto fare
+# df_air_data = df_air_quality.join(df_sensors, df_air_quality["idsensore"] == df_sensors["idsensore"], how="inner")
+
+#Output
++---------+-------------------+------+-----+-----------+---------------+-----------+------+
+|idsensore|               data|valore|stato|idoperatore|nometiposensore|unitamisura|comune|
++---------+-------------------+------+-----+-----------+---------------+-----------+------+
+|    17126|2024-05-24 01:00:00|   0.9|   VA|          1|        Benzene|      µg/m³|Milano|
+|    17126|2024-05-24 02:00:00|   1.1|   VA|          1|        Benzene|      µg/m³|Milano|
+|    17126|2024-05-24 03:00:00|   1.0|   VA|          1|        Benzene|      µg/m³|Milano|
+|    17126|2024-05-24 04:00:00|   1.0|   VA|          1|        Benzene|      µg/m³|Milano|
+|    17126|2024-05-24 05:00:00|   0.7|   VA|          1|        Benzene|      µg/m³|Milano|
++---------+-------------------+------+-----+-----------+---------------+-----------+------+
+```
+
+Esempio di `LEFT JOIN`:
+```python
+df_air_data_left = df_air_quality.join(df_sensors, "idsensore", how="left_outer")
+```
+
+Esempio di `RIGHT JOIN`:
+```python
+df_air_data_left = df_air_quality.join(df_sensors, "idsensore", how="right_outer")
+```
+
+Esempio di `SEMI JOIN` (restituisce i record della tabella di sinistra per cui esiste un corrispondente nella tabella di destra, senza aggiungere campi della tabella di destra e senza duplicare le righe di sinistra in caso di match multipli):
+```python
+df_semi = df_sensors.join(df_air_quality, "idsensore", how="semi")
+```
+
+Esempio di `CROSS JOIN`:
+```python
+df_cross = df_sensors.join(df_air_quality, how="cross")
+```
