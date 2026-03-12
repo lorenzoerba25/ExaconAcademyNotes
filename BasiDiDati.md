@@ -1,9 +1,6 @@
 # Basi di dati 
 All'interno di questo file markdown sono presenti appunti ed esercitazioni riguardanti il corso di Basi di Dati.
 
-## Piccolo disclaimer
-Poichè posseggo una discreta conoscenza dei database relazionali e linguaggi di query, all'interno del file sono presenti solo informazioni che per me risultano nuove o poco chiare, per cui conviene tenerne traccia negli appunti.
-
 ## Linguaggi di un DBMS
 Un DBMS supporta diversi tipi di linguaggi:
 - **Data Definition Language (DDL)**: permette di specificare e modificare lo schema della base di dati, lo schema delle viste e i vincoli di integrità. Agisce sul livello logico ed esterno.
@@ -11,13 +8,14 @@ Un DBMS supporta diversi tipi di linguaggi:
 - **Storage Definition Language (SDL)**: definisce lo schema fisico del DB. Agisce sul livello fisico.
 
 In sintesi possiamo affermare che **DDL** e **DML** sono linguaggi **CRUD**, ovvero quei linguaggi che supportano operazioni di:
-- Creation
-- Read
-- Update
-- Delete
+- **Creation**
+- **Read**
+- **Update**
+- **Delete**
+
 Entrambi agiscono allo stesso modo ma da punti di vista differenti:
-- il DML agisce sulle istanze delle relazioni, i dati veri e propri
-- il DDL agisce sullo schema delle relazioni, sulla "struttura"
+- il **DML** agisce sulle istanze delle relazioni, i dati veri e propri
+- il **DDL** agisce sullo schema delle relazioni, sulla "struttura"
 
 Fra i vari linguaggi di interrogazione uno dei più famosi è **SQL (Structured Query Language)** che fornisce un approccio di interrogazione dichiarativa, poichè in modo esplicito dichiariamo cosa vogliamo ottenere dall'interrogazione.
 SQL non è nato nè per la potenza computazionale ma per la potenza espressiva. Di fatti frài vari vantaggi troviamo:
@@ -31,7 +29,7 @@ Prima di introdurre il concetto di vincolo e le istruzioni SQL per DDL e DML ele
 - tipi numerici: interi, decimali
 - tipi temporali: date, ore, intervalli di tempo
 - booleani
-- BLOB,CLOB (Binary/Character Large Object): per grandi immagini e testi
+- BLOB, CLOB (Binary/Character Large Object): per grandi immagini e testi
 
 Un tipo particolare di dato è rappresentato dal valore nullo `NULL`. Molti DBMS supportano la possibilità di assegnare a qualsiasi *data-type* il valore `NULL`. Esso rappresenta un valore valido per ogni dominio in quanto non appartiene a un dominio preciso. La gestione dei valori `NULL` deve avvenire in modo dedicato e con cautela (per esempio confrontare `Matricola=NULL` risulta ambiguo).
 
@@ -57,6 +55,21 @@ I **vincoli di chiave primaria** agiscono sull'intera tupla con una visione glob
 - la frequentazione di un corso è identificata dalla matricola dello studente e dall'identificativo del corso. 
 
 I **vincoli di integrità referenziale** agiscono sul legame tra relazioni, garantendo che io in una tabella possa inserire il valore di una chiave di un'altra tabella per evitare di inserire tutti i dati della tupla. Per esempio date le tabelle **Corsi** e **Docenti** io posso inserire nella relazione **Corsi** la matricola del docente, in modo da associare a ciascun corso l'identificativo del docente che lo sostiene. Per tanto realizziamo una correlazione logica tra le relazioni e il vincolo stabilisce che non può esistere una chiave, detta **chiave esterna**, che non esiste nella relazione in cui è chiave primaria (non posso aggiungere un corso sostenuto da un docente che non esiste nella tabella Docenti).
+
+
+## Il concetto di valori nulli
+SQL ammette una logica a tre valori:
+- `TRUE`
+- `FALSE`
+- `UNKNOWN`
+Il valore `UNKNOWN` indica che il valore di verita di una condizione di ricerca applicata ad una data tupla non e determinabile. Solitamente questo si verifica quando effettuiamo un confronto tra un valore precisato e un valore `NULL`.
+Di fatti SQL consente di assegnare a una determinata colonna di una tabella il valore `NULL` per cui si sta indicando che quella colonna non ha un valore specificato attualmente e quindi `NULL` appartiene a tutti i domini. Il problema del valore `NULL` è che se confrontato con un intero o un qualsiasi altro valore (compreso un altro `NULL`) produce in output il valore `UNKNOWN` (per esempio `NULL = 5` oppure `NULL=NULL`).
+
+Un altro problema causato dalla presenza di valori `NULL` e che nelle espressioni aritmetiche se un argomento è `NULL` allora il valore dell'intera espressione è `NULL` (per esempio `dataRest - dataNol` DAY può dare `NULL` se uno dei due campi è `NULL`).
+
+Altro problema lo abbiamo con le funzioni aggregate (che vedremo successivamente) poichè escludono le tuple che hanno valore `NULL` per la colonna specificata nella funzione. Per esempio `SUM(colonna1 + colonna2)` può dare risultato diverso da `SUM(colonna1) + SUM(colonna2)`.
+
+Per risolvere questo problema possiamo ricondurre una logica a 3 valori ad una logica a due valori (vero e falso). Questo viene effettuato grazie al predicato `IS NULL` che se applicato ad un attributo restituisce `TRUE` se la tupla ha valore nullo per l'attributo. Analogamente `NOT IS NULL` restituisce `TRUE` se non è `NULL`.
 
 
 ## DDL
@@ -209,7 +222,7 @@ In entrambi i casi abbiamo 4 opzioni disponibili:
 
 In entrambi i casi, se omessa la modalitàm, di default si imposta `NO ACTION` per entrambi i casi. Non esiste una combinazione corretta o errata, dipende sempre dai vari casi di utilizzo ma la più utilizzata è `ON UPDATE CASCADE ON DELETE NO ACTION`.\
 
-Infine l'ultimo vincolo di integrità definibile sul costrutto `CREATE TABLE` è il vincolo di tipo `CHECK` che consente di specificare condizioni di validità su una colonna o relazione.
+Infine l'ultimo vincolo di integrità definibile sul costrutto `CREATE TABLE` è il vincolo di tipo `CHECK` che consente di specificare condizioni di validità su una colonna o relazione. Quindi il vincolo di check è valido se ciò che viene restituito non è `FALSE`, quindi `TRUE/UNKNOWN` valida il vincolo `CHECK`. Se invece volessimo rendere il vincolo valido solo se otteniamo `TRUE` allora dobbiamo usare una asserzione (successivamente introdotta).
 
 Vincoli **CHECK su colonna** sono definiti come:
 ```sql
@@ -232,7 +245,233 @@ CREATE TABLE Film(
 
 Il vincolo CHECK deve sempre restituire `True/False` e viene invocato in caso di inserimento/aggiornamento e nel caso positivo, il record viene aggiunto/aggiornato, nel caso negativo non viene inserito/aggiornato.
 
+Dopo aver visto i comandi del DDL per la creazione di relazioni, vediamo il comando per l'eliminazione di una tabella, che avviene tramite l'istruzione `DROP`:
+```sql
+DROP TABLE <nome relazione> {RESTRICT | CASCADE}
+```
+Nel dettaglio `DROP` cancella lo schema e la sua istanza (i dati). Nel dettaglio dobbiamo specificare:
+- `<nome relazione>`che rappresenta il nome della tabella da cancellare
+- `RESTRICT | CASCADE` permettono di specificare il comportamento della `DROP` nel caso in cui la tabella da cancellare è una tabella riferita. Se omessa la scelta `RESTRICT` è di default.
+  - `RESTRICT`: l'operazione di cancellamento fallisce se si tratta di una tabella riferita (esiste un'altra tabella che fa riferimento alla tabella che vogliamo eliminare)
+  - `CASCADE`: l'operazione di cancellamento viene eseguita sulla tabella specificata e se si tratta di una tabella riferita vengono eliminati i legammi (vincoli di *foreign key*).
 
+Un altro comando del **DDL** è `ALTER`, utilizzato per modificare lo schema di una relazione. La sintassi nell'utilizzo di `ALTER` è:
+```sql
+ALTER TABLE <nome relazione> <modifica>
+```
+dove:
+- `<nome relazione>` è il nome della relazione da modificare
+- `<modifica>` è la modifica da applicare scelta tra:
+  - aggiunta di una nuova colonna
+  - definizione/rimozione/modifica del valore di default per una colonna esistente
+  - eliminazione di una colonna esistente
+  - definizione di un nuovo vincolo di integrità
+  - eliminazione di un vincoo di integrità esistente
+
+Nel dettaglio `<modifica>` viene scelta tra:
+- aggiunta di una nuova colonna `ADD [COLUMN] <specifica colonna>`
+- aggiunta/modifica/rimozione del valore di default:
+  
+  `ALTER [COLUMN] <nome colonna> {SET DEFAULT <valore default> | DROP DEFAULT}`
+- eliminazione di una colonna:
+  
+  `DROP [COLUMN] <nome colonna> {RESTRICT | CASCADE}`
+
+- definizione/eliminazione vincolo
+
+  `ADD CONSTRAINT [nome vincolo] <specifica vincolo>`
+
+  `DROP CONSTRAINT <nome vincolo> {RESTRICT | CASCADE}`
+
+
+Vediamo ora un esercizio riassuntivo su quanto visto fino ad'ora sul **DDL**.
+
+Specificare, utilizzando i comandi SQL, lo schema
+della Palestra SemprelnForma specificando i
+vincoli di integrità contenuti nello schema stesso ed
+imponendo che:
+  1. la cancellazione di una corso non sia possibile se il corso
+  è attualmente in orario
+  2. la cancellazione di un corso comporti la rimozione di tutti i
+  suoi iscritti
+  3. Il fatto che un organizzatore di un corso lasci la palestra,
+  fa si che il corso non sia momentaneamente assegnato ad
+  alcun organizzatore
+  4. Il fatto che un istruttore lasci la palestra, fa si che i corsi da
+  lui tenuti abbiano come istruttore quello con codice 7253
+  5. il livello usuale di un corso sia intermedio
+
+Pertanto procediamo a:
+1. Sulla chiave esterna di Orario vado a mettere on delete NO ACTION
+2. sulla chiave esterna di iscritti metto on delete cascade
+3. sulla chiave esterna di corso relativa all' istruttore, in caso ddelete metto on delete set null, questo implica che di default è null. (doppio vincolo)
+4. specifichiamo sulla chiave esterna di corsi on delete set default e poi indichiamo default7253.
+5. mettiamo come default sul campo livello "intermedio".
+```sql
+
+-- Tabella Istruttori
+CREATE TABLE Istruttori (
+    codice_istruttore INT PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL
+);
+
+-- Tabella Organizzatori
+CREATE TABLE Organizzatori (
+    id_organizzatore INT PRIMARY KEY,
+    nome VARCHAR(50) NOT NULL
+);
+
+-- Tabella Corsi
+CREATE TABLE Corsi (
+    codice_corso INT PRIMARY KEY,
+    nome_corso VARCHAR(50) NOT NULL,
+    -- Punto 5: Livello usuale intermedio di default
+    livello VARCHAR(20) DEFAULT 'intermedio',
+    -- Punto 3: Se l'organizzatore se ne va, il campo diventa NULL
+    id_organizzatore INT,
+    FOREIGN KEY (id_organizzatore) 
+        REFERENCES Organizzatori(id_organizzatore) 
+        ON DELETE SET NULL,
+    -- Punto 4: Se l'istruttore se ne va, viene assegnato il codice 7253
+    codice_istruttore INT DEFAULT 7253,
+    FOREIGN KEY (codice_istruttore) 
+        REFERENCES Istruttori(codice_istruttore) 
+        ON DELETE SET DEFAULT
+);
+
+-- Tabella Orari (Programmazione corsi)
+CREATE TABLE Orari (
+    id_orario INT PRIMARY KEY,
+    codice_corso INT NOT NULL,
+    giorno_settimana VARCHAR(10),
+    -- Punto 1: RESTRICT impedisce la cancellazione se il corso è in orario
+    FOREIGN KEY (codice_corso) 
+        REFERENCES Corsi(codice_corso) 
+        ON DELETE RESTRICT
+);
+
+-- Tabella Iscritti
+CREATE TABLE Iscritti (
+    id_iscritto INT PRIMARY KEY,
+    nome_utente VARCHAR(50),
+    codice_corso INT,
+    -- Punto 2: CASCADE rimuove gli iscritti se il corso viene eliminato
+    FOREIGN KEY (codice_corso) 
+        REFERENCES Corsi(codice_corso) 
+        ON DELETE CASCADE
+);
+```
+
+- La palestra SemprelnForma decide di memorizzare anche l'email di iscritti (in modo facoltativo) ed istruttori (in modo obbligatorio). Modificare lo schema di conseguenza:
+```sql
+ALTER TABLE Istruttori ADD COLUMN
+email(varchar(30) NOT NULL);
+
+ALTER TABLE Iscritti ADD COLUMN
+email (varchar(30) DEFAULT NULL); /*equivalente se non scrivo default null.*/
+```
+- Si vuole inoltre cambiare il livello usuale di un corso da intermedio a base:
+```sql
+ALTER TABLE Orario ALTER COLUMN livello SET DEFAULT 'base'
+```
+## DML
+
+Dopo aver visto il **DDL**, che permette di definire, modificare ed eliminare lo schema delle tabelle, introduciamo il **DML (Data Manipulation Language)** che permette di inserire, modificare ed eliminare le istanze di una tabella. Quindi le istruzioni del DML hanno non trattano più lo schema della istanze, bensì le tuple che popolano le varie relazioni.
+
+Il DML utilizza le seguenti *keywords*:
+- per l'inserimento **INSERT**
+- per la modifica **UPDATE**
+- per la cancellazione **DELETE**
+- per l'interrogazione **SELECT**
+
+Per l'inserimento di un nuovo record nella tabella si utilizza la seguente sintassi:
+```sql
+INSERT INTO S [(C1,C2, ... ,Cn)]
+{VALUES (V1,V2, ... ,Vn) | sq};
+```
+dove:
+- `S` è il nome della tabella su cui inserire i dati
+- `C1,C2,cn` è la lista delle colonne della nuova tupla (o delle nuove tuple) a cui si assegnano i valori. Molto importante notare che tutte le colonne non elencate esplicitamente ricevono il valore `NULL` o di default (se opportunamente specificato nel comando di `CREATE`)
+- la mancata specifica di una lista di colonne equivale ad una lista che include tutte le colonne di `S` nell'ordine dato nel comando di `CREATE` (per cui vanno inseriti necessariamente tutti i valori)
+- i valori da assegnare alla nuova tupla sono specificati esplicitamente attraverso la clausola `VALUES` dove:
+  - `V1,V2,...,Vn` è la lista di valori da assegnare alla nuova tupla
+  - i valori sono assegnati nell'ordine in cui sono scritti (l'*i-esimo* valore viene assegnato alla colonna *i-esima*)
+  - la lista può contenere la parola chiave `NULL` o `DEFAULT` per assegnare il valore di default alla colonna indicata
+  -  possono essere specificati attraverso una sottoquery `sq` (quindi le tuple restituite dalla sotto-interrogazione vengono inserite nella relazione `S` e ovviamente il dominio della colonna *i-esima* della tupla deve coincidere col dominio della colonna Ci)
+
+Esempio in cui specifichiamo tutti i valori tranne il campo valutazione che essendo nullable assumerà valore `NULL`:
+```sql
+INSERT INTO Film(titolo, regista, anno, genere)
+VALUES ('la tigre e la neve', 'roberto begnigni',2005,'commedia');
+```
+Ricapitolando possiamo affermare che se un valore non viene specificato:
+- se il campo è *nullable*
+  - se il campo ha un valore di *default* assumerà il valore specificato
+  - se il campo non ha un valore di *defualt* assumerà valore `NULL`
+- se il campo non è *nullable*
+  - se il campo ha un valore di *default* assumerà il valore specificato
+  - se il campo non ha un valore di *default* verrà generato un errore
+
+Esempio di inserimento tramite sotto-interrogazione:
+```sql
+INSERT INTO ProdottiMilanesi
+SELECT codice,descrizione
+FROM Prodotti
+WHERE LuogoProduzione = 'Milano';
+```
+
+Così come possiamo inserire uno o più record, possiamo anche cancellare una tupla attraverso la clausola `DELETE` con la seguente sintassi:
+```sql
+DELETE FROM S [<alias>] [WHERE F]
+```
+dove:
+- `S` è il nome della relazione su cui si esegue la cancellazione
+- Il nome della realazione può avere associato un alias se è necessario riferire tuple di tale relazione in una qualche sotto-interrogazione presente in `F`
+- `F` è la clausola di qualificazione che specifica le tuple da cancellare
+- Se non è specificata alcuna clausola di qualificicazione, vengono cancellate tutte le tuple
+Importante specificare che la clausola `DELETE` opera tupla per tupla, quindi per ogni tupla della tabella viene applicato il predicato e se è vero, la tupla viene cancellata altrimenti si passa alla prossima tupla. Quindi se operiamo con predicati su cui lavoriamo con una chiave primaria, abbiamo la certezza che se presente cancelleremo una sola tupla.
+
+Per esempio:
+```sql
+DELETE FROM Film WHERE titolo = 'la tigre e la neve' AND regista = 'roberto benigni'
+```
+
+Dopo aver visto inserimento e cancellazione possiamo introdurre la clausola `UPDATE` per aggiornare i record di una relazione:
+```sql
+UPDATE S [<alias>]
+SET C1 = {e1 | NULL},..., Cn = {en | NULL}
+[WHERE F]
+```
+dove:
+- `S` è il nome della relazione su cui si esegue la modifica
+- `S` può avere associato un alias se è necessario riferire tuple di `S` in una qualche sotto-interrogazione presente in F
+Quindi la clausola `UPDATE` aggiorna tutte le tuple che soddisfano il predicato `F` assegnando come nuovi valori alle colonne specificate (`C1,..,Cn`). I valori specificati in `SET` possono essere recuperati da delle sotto-interrogazioni purchè esse restituiscano un solo valore.
+
+Inoltre:
+- `Ci = {ei | NULL} (i=1,...n)` è un'espressione di assegnamento che specifica che alla colonna `Ci` deve essere assegnto il valore dell'espressione `ei`:
+  - `ei` può essere una costante, oppure un'espressione aritmetica o di stringa, spesso funzione dei valori correnti delle tuple da modificare, oppure una sotto-interrogazione
+- Alternativamente si puo specificare che alla colonna sia assegnato il valore nullo
+- `F` è la clausola di qualificazione che specifica le tuple da modificare
+- Se non è specificata alcuna clausola di qualificazione, vengono modificate tutte le tuple.
+
+Per esempio:
+```sql
+/* Aggiorniamo la valutazione di tutti i film raddoppiando la scala*/
+UPDATE Film
+SET valutazione = valutazione * 2;
+
+/* Aggiorniamo la restituzione di tutti i film a noleggio del cliente 6635 */
+UPDATE Noleggio
+SET dataRest = current_date
+WHERE codCli = 6635 AND dataRest IS NULL;
+```
+
+Le sotto-interrogazioni con `UPDATE` possono essere specificate:
+- nella clausola di qualificazione per determinare le tuple da modificare
+- nella clausola di assegnamento per determinare i nuovi valori da assegnare alle tuple
+
+
+Infine passiamo a vedere la clausola `SELECT` che consente di visualizzare i dati presenti nelle relazioni.
 
 ## Operatori insiemistici
 `UNION`,`INTERSECT` e `EXCEPT`.
