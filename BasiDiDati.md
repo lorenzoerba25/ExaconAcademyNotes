@@ -471,7 +471,75 @@ Le sotto-interrogazioni con `UPDATE` possono essere specificate:
 - nella clausola di assegnamento per determinare i nuovi valori da assegnare alle tuple
 
 
-Infine passiamo a vedere la clausola `SELECT` che consente di visualizzare i dati presenti nelle relazioni.
+Infine passiamo a vedere la clausola `SELECT` che consente di visualizzare i dati presenti nelle relazioni. Il formato abse di una interrogazione segue la seguente forma:
+```sql
+SELECT {[DISTINCT] R1.C1, R1.C2, R2.C1, ... | *}
+FROM R1,R2,...,Rk
+[WHERE F]
+```
+Con questa interrogazione andiamo a caricare *in primis* le relazioni `R1,R2,..,Rk` in memoria, successivamente applichiamo una clausola di qualificazione `F` se presente e infine preleviamo i campi necessari tramite la clausola di proiezione `SELECT`. Nel dettaglio:
+- `R1.C1` consente di accedere alla colonna `C1` della relazione `R1`.
+
+Quando eseguiamo questa clausola `FROM` stiamo applicando un prodotto cartesiano tra tutte le relazioni indicate, quindi come risultato otteniamo un'unica tabella dove abbiamo tutte le possibili combinazioni fra le varie tuple di ciascuna relazione con le altre. Successivamente `WHERE` e `SELECT` operano direttamente su questa tabella.
+
+Se nella clausola `SELECT` specifichiamo l'operatore `*` indichiamo la volontà di ottenere tutti i campi della tabella calcolata nella clausola `FROM`. Inoltre se nella clausola `FROM` indichiamo solo una relazione, possiamo indicare i campi direttamente con il loro nome senza la sintassi `relazione.colonna`.
+
+Per esempio:
+```sql
+/* Otteniamo tutti i film presenti nella tabella Film */
+SELECT *
+FROM Film
+
+/* Otteniamo il titolo dei film precedenti al 2000*/
+SELECT titolo
+FROM Film
+WHERE anno < 2000
+
+/* Otteniamo tutti i campi dei film del regista Tim Burton */
+SELECT *
+FROM Film
+WHERE regista = 'Tim Burton'
+```
+La keyword `DISTINCT` nella clausola `SELECT` specifica che si vogliono ottenere solo valori distinti (non ripetuti) del campo indicato immediatamente dopo. Per esempio `SELECT DISTINCT(genere) FROM Film` restituisce i vari generi senza ripetizione. 
+
+Nella clausola `WHERE` possiamo specificare delle espressioni che vengono calcolate tupla per tupla. Per esempio potrei volere il codice dei clienti che hanno dei film noleggiati negli ultimi 5 giorni:
+```sql
+SELECT DISTINCT codCli
+FROM Noleggio
+WHERE dataNol >= current_date + 5
+```
+
+Oltre a specificare delle espressioni nella clausola `WHERE` è possibile specificare delle espressioni nella clausola `SELECT` che causano una modifica del risultato ottenuto (non modifica direttamente i valori nella tabella come `UPDATE`). Per esempio:
+```sql
+SELECT colloc, (dataRest - dataNol) DAY 
+FROM Noleggio
+WHERE codCLi = 1234
+```
+
+È possibile inoltre assegnare un nome differente a una colonna assegnando un alias tramite la keyword `AS`:
+```sql
+SELECT Stipendio/12 AS stipendioMensile
+FROM Dipendenti
+WHERE Cognome = 'bianchi'
+```
+
+## Operatore BETWEEN e LIKE
+Nella clausola `WHERE` è possibile utilizzare l'operatore `BETWEEN` che permette di specificare un range, valore minimo e valore massimo (inclusi). Solitamente compatibile su dati numerici ma anche su date e orari. Per esempio:
+```sql
+SELECT *
+FROM Film
+WHERE anno BETWEEN 1999 AND 2000
+```
+L'operatore `LIKE` si usa invece solitamente per cercare un match con stringhe tramite l'utilizzo di due *wildcard*:
+- `_` identifica un carattere qualsiasi
+- `%` identifica qualsiasi numero di caratteri, da 0 a più.
+Per esempio:
+```sql
+/* Determinare tutti i film che hanno 'd' come terza lettera del titolo */
+SELECT *
+FROM Film
+WHERE titolo LIKE '__d%'
+```
 
 ## Operatori insiemistici
 `UNION`,`INTERSECT` e `EXCEPT`.
