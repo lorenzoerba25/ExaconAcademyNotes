@@ -986,3 +986,48 @@ Oltre a essere utilizzati con operatori `IN, NOT IN` possono essere usati con op
 Analogamente ad altri confronti, il confronto tra un `NULL` e un valore preciso o due `NULL` restituisce un `NULL`. Per ovviare a questo problema è possibile utilizzare i costrutti `IS DISTINCT FROM` e `IS NOT DISTINCT FROM` che operano rispettivamente come `<>` e `=` ma gestendo i *null-values* garantendo risultati solo come true/false e assenza di *null-result*
 
 Le stesse regole valgono per quando combiniamo operatori di confronto con operatori `ALL` e `ANY`, che a differenza degli operatori di confronto che richiedono una subquery scalare, richiedono una subquery colonna o tabella. 
+
+## Funzioni aggregate
+
+Le funzioni aggregate in SQL permettono di calcolare un valore aggregato (quindi univoco) a partire da un gruppo di record. In assenza della clausola `GROUP BY`, che vedremo successivamente, viene calcolato l'aggregato sull'intera tabella. Le funzioni di aggregazione supportate sono:
+- `COUNT`: effettua il conteggio dei record sulla base del campo specificato nel parametro
+- `SUM`: effettua la somma dei valori assunti dall'espressione specificata come parametro
+- `AVG`: calcola la media dei valori assunti dall'espressione specificata come parametro
+- `MIN`: calcola il minimo dei valori assunti dall'espressione specificata come parametro
+- `MAX`: calcola il massimo dei valori assunti dall'espressione specificata come parametro
+
+Per esempio:
+```sql
+SELECT 
+COUNT(d.ferie_godute),
+AVG(d.ferie_godute),
+MAX(d.ferie_godute),
+MIN(d.ferie_godute),
+SUM(d.ferie_godute)
+FROM dipendenti d
+```
+
+Importante notare che possiamo specificare la keyword `DISTINCT` all'interno della funzione aggregata in modo da agire direttamente solo sui valori non ripetuti specificati come parametro. In questo esempio andiamo a contare il numero di dipendenti con ferie godute non ripetute:
+```sql
+SELECT COUNT(DISTINCT d.ferie_godute)
+FROM dipendenti d
+```
+Importante notare che la funzione aggregata `COUNT` può essere applicata:
+- a un campo specifico e in questo caso contiamo i record sulla base del campo specificato
+- a tutti i campi tramite `COUNT(*)` dove contiamo sulla base di tutti i campi
+
+Inoltre se applichiamo qualsiasi funzione aggregata, tranne `COUNT`, a una tabella vuota resituiscono `NULL` mentre `COUNT` restituisce 0. Questo perchè in assenza di record SQL non è in grado di fare i calcoli su record assenti.
+
+Un altro aspetto importante è che le funzioni aggregate operano solo su valori non `NULL`. Per esempio `AVG` calcola la media facendo la somma
+
+Possiamo poi specificare un predicato di filtro per la singola funzione di aggregazione, invece che specificarlo nella clausola `WHERE` con il vantaggio che filtriamo la tabella solo per quell'aggregato mentre per gli altri rimane invariata. Per esempio in questo caso andiamo a calcolare la somma delle ferie godute solo se il dipendente ha un id maggiore di 3.
+```sql
+select sum(d.ferie_godute) filter (where d.id_dipendente > 3), sum(d.ferie_godute)
+from dipendenti d
+```
+
+In PostgreSQL possiamo poi utilizzare alcune funzioni *built-in* che consentono di calcolare un'aggregazione specificando la clausola di ordinamento dentro il metodo. In questo caso andiamo a calcolare una concatenazione del campo `nome` ordinando i nomi in modo decrescente.
+```sql
+select string_agg(d.nome, ';' order by d.nome desc) 
+from dipendenti d
+```
