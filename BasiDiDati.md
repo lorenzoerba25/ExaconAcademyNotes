@@ -482,7 +482,17 @@ Con questa interrogazione andiamo a caricare *in primis* le relazioni `R1,R2,..,
 
 Quando eseguiamo questa clausola `FROM` stiamo applicando un prodotto cartesiano tra tutte le relazioni indicate, quindi come risultato otteniamo un'unica tabella dove abbiamo tutte le possibili combinazioni fra le varie tuple di ciascuna relazione con le altre. Successivamente `WHERE` e `SELECT` operano direttamente su questa tabella.
 
-Se nella clausola `SELECT` specifichiamo l'operatore `*` indichiamo la volontà di ottenere tutti i campi della tabella calcolata nella clausola `FROM`. Inoltre se nella clausola `FROM` indichiamo solo una relazione, possiamo indicare i campi direttamente con il loro nome senza la sintassi `relazione.colonna`.
+Se nella clausola `SELECT` specifichiamo l'operatore `*` indichiamo la volontà di ottenere tutti i campi della tabella calcolata nella clausola `FROM`. Inoltre se nella clausola `FROM` indichiamo solo una relazione, possiamo indicare i campi direttamente con il loro nome senza la sintassi `relazione.colonna`. Altrimenti possiamo fare renaming della relazione indicata nella `FROM` inserendo dopo la relazione il nome dell'alias. In questo caso la relazione `Film` verrà rinominata f per tutta la query.
+```sql
+SELECT nome
+FROM Film f
+
+/*analogo ma abbiamo una sola relazione */
+SELECT f.nome
+FROM Film f
+```
+
+Analogamente possiamo rinominare, assegnare un alias ai campi della `SELECT` tramite la clausola `AS` 
 
 Per esempio:
 ```sql
@@ -500,7 +510,7 @@ SELECT *
 FROM Film
 WHERE regista = 'Tim Burton'
 ```
-La keyword `DISTINCT` nella clausola `SELECT` specifica che si vogliono ottenere solo valori distinti (non ripetuti) del campo indicato immediatamente dopo. Per esempio `SELECT DISTINCT(genere) FROM Film` restituisce i vari generi senza ripetizione. 
+La keyword `DISTINCT` nella clausola `SELECT` specifica che si vogliono ottenere solo valori distinti (non ripetuti) di tutti i campi che compaiono dopo. Per esempio `SELECT DISTINCT(genere) FROM Film` restituisce i vari generi senza ripetizione. 
 
 Nella clausola `WHERE` possiamo specificare delle espressioni che vengono calcolate tupla per tupla. Per esempio potrei volere il codice dei clienti che hanno dei film noleggiati negli ultimi 5 giorni:
 ```sql
@@ -518,10 +528,14 @@ WHERE codCLi = 1234
 
 È possibile inoltre assegnare un nome differente a una colonna assegnando un alias tramite la keyword `AS`:
 ```sql
+SELECT nome as nome_dipendente
+FROM dipdenente
+
 SELECT Stipendio/12 AS stipendioMensile
 FROM Dipendenti
 WHERE Cognome = 'bianchi'
 ```
+
 
 ## Operatore BETWEEN e LIKE
 Nella clausola `WHERE` è possibile utilizzare l'operatore `BETWEEN` che permette di specificare un range, valore minimo e valore massimo (inclusi). Solitamente compatibile su dati numerici ma anche su date e orari. Per esempio:
@@ -540,6 +554,47 @@ SELECT *
 FROM Film
 WHERE titolo LIKE '__d%'
 ```
+
+## Ordinamento del risultato e limitazione
+Quando eseguiamo una query possiamo specificare di ordinare il risultato rispetto a uno o più campi (in modo crescente o decrescente). Questo avviene tramite la clausola `ORDER BY` che causa un ordinamento del risultato rispetto ai campi indicati.
+Ad esempio se vogliamo il nome dei dipendenti in ordine alfabetico crescente:
+```sql
+SELECT nome
+FROM dipendenti
+ORDER BY nome ASC /*ASC è opzionale, se omesso è di default */
+```
+Oppure lo stipendio dei dipendenti a partire dal più alto (tramite la keyword `DESC`):
+```sql
+SELECT stipendio
+FROM dipendenti
+ORDER BY stipendio DESC
+```
+
+Possiamo anche ordinare per campi non presenti in `SELECT` ma ovviamente in questo caso non abbiamo un riferimento visivo dell'ordinamento:
+```sql
+SELECT nome
+FROM dipendenti
+ORDER BY data_di_nascita
+```
+
+Inoltre possiamo limitare la visualizzazione del risultato ai primi n record tramite la clausola `LIMIT` (non è standard SQL ma supportato dalla maggior parte dei DBMS). Ad esempio se vogliamo i primi cinque dipendenti con lo stipendio più alto
+```sql
+SELECT nome
+FROM dipendenti
+ORDER BY stipendio DESC
+LIMIT 5
+```
+
+
+A questo punto risulta importante indicare come il DBMS (DataBase Management System) esegue le query, in termini di ordine di esecuzione delle clausole. 
+1. FROM -> Il DBMS carica l'intera tabella in memoria
+2. WHERE -> Se presente il DBMS inizia ad applicare i predicati a ciascun record della tabella caricata, per cui alcuni record rimangono altri vengono scartati
+3. SELECT -> Il DBMS preleva solo gli attributi indicati nella clausola di proiezione,
+4. DISTINCT -> Se presente il DBMS preleva solo i valori non duplicati dei campi specificati nella clausola di proiezione
+5. ORDER BY -> Se presente il DBMS ordina il risultato da proiettare sulla base dei campi specificati
+6. LIMIT -> Se presente il DBMS preleva solo i primi n record da proiettare
+
+## Join
 
 ## Operatori insiemistici
 `UNION`,`INTERSECT` e `EXCEPT`.
@@ -1006,6 +1061,13 @@ MIN(d.ferie_godute),
 SUM(d.ferie_godute)
 FROM dipendenti d
 ```
+Importante notare che se le funzioni di aggregazione calcolano un solo valore per quel gruppo (in questo caso l'intera tabella), non possiamo stampare affianco valori che non sono univoci. Per esempio
+```sql
+SELECT COUNT(*),nome
+FROM dipendenti
+```
+
+produce errore, perchè nome cambia per ogni tupla e non possiamo associarlo a un valore unico.
 
 Importante notare che possiamo specificare la keyword `DISTINCT` all'interno della funzione aggregata in modo da agire direttamente solo sui valori non ripetuti specificati come parametro. In questo esempio andiamo a contare il numero di dipendenti con ferie godute non ripetute:
 ```sql
@@ -1031,3 +1093,96 @@ In PostgreSQL possiamo poi utilizzare alcune funzioni *built-in* che consentono 
 select string_agg(d.nome, ';' order by d.nome desc) 
 from dipendenti d
 ```
+
+Con le funzioni aggregate noi calcoliamo un unico valore a partire da un gruppo (al momento l'intera tabella). Alle volte può tornare utile calcolare una funzione aggregata su più gruppi specificando il campo su cui calcolari. Questo è possibile tramite l'uso della clausola `GROUP BY` che richiede uno o più campi su cui verranno creati i gruppi. Ad esempio `GROUP BY dipartimento` realizza tanti gruppi quanti sono i valori distinti assunti da `dipartimento`, in modo da creare un gruppo per ciascun valore diverso di dipartimento dove in ogni gruppo abbiamo tutti i record che condividono questo valore. 
+
+Molto importante notare che quando operiamo con `GROUP BY` nella clausola `SELECT` possiamo indicare solo funzioni aggregate e/o i campi presenti nella clausola di `GROUP BY`. Questo perchè se inserissimo altri campi, ad esempio nome e cognome, dovremmo fare un gruppo per ogni dipartimento e di quest'ultimi prende nome e cognome, ma non sapremmo quali in quanto un gruppo è visto come un unico blocco dati da cui estrapolare un solo valore.
+
+```sql
+/* produce ERRORE */
+SELECT nome
+FROM dipendenti
+GROUP BY dipartimento
+
+/* restituisce il numero di dipendenti per dipartimento */
+SELECT COUNT(*)
+FROM dipendenti
+GROUP BY dipartimento
+
+/* restituisce la somma degli stipendi per dipartimento e il dipartimento associato*/
+SELECT SUM(stipendio), dipartimento
+FROM dipendenti
+GROUP BY dipartimento
+```
+
+Così come `WHERE` filtra i record prodotti da `FROM`, anche per `GROUP BY` possiamo filtrare i record di ciascun gruppo tramite la clausola `HAVING`. Questa clausola permette di filtrare i gruppi prodotti da `GROUP BY` che soddisfano il predicato specificato. Quindi in altre parole `HAVING` viene applicato per ogni gruppo e per tale motivo può solo operare con funzioni aggregate oppure sul campo indicato in `GROUP BY`.
+
+Ad esempio `GROUP BY dipartimento HAVING SUM(stipendio) > 1000` filtra i dipartimenti per cui la somma degli stipendi è maggiore di 1000. È possibile anche specificare delle funzioni aggregate nella clausola `HAVING` che ovviamente calcoleranno un valore univoco per ciascun gruppo. Ad esempio potremmo volere i dipartimenti con almeno dieci dipendenti e quindi:
+```sql
+SELECT dipartimento
+FROM dipendenti
+GROUP BY dipartimento
+HAVING COUNT(*) >= 10
+```
+
+Vediamo di seguito alcuni esercizi:
+```sql
+/* 1. Dalla tabella countries per ogni region_id trovare il numero di country_id associati  */
+select region_id, count(country_id)
+from countries
+group by region_id 
+
+/* 2. Dalla tabella countries per ogni region_id trovare il numero di country_id associati 
+ * solo per i record con region_id pari (provare anche a fare l'esercizio utilizzando la filter clause)  */
+select region_id, count(country_id)
+from countries
+where region_id % 2 = 0
+group by region_id 
+
+/* con filter clause */
+select region_id, count(country_id) filter (where region_id % 2 = 0)
+from countries
+group by region_id 
+having count(country_id) filter (where region_id % 2 = 0) > 0
+
+/* 3. Dalla tabella countries selezionare quei region_id che hanno più di 5 diversi country_name */
+select region_id
+from countries
+group by region_id
+having count(distinct country_name) > 5
+
+/* 4. Nella tabella employees a parità di department_id trovare: 
+
+- minimo employee_id 
+
+- massimo employee_id 
+
+- conteggio degli employee_id 
+
+- differenza tra massimo employee_id e minimo employee_id 
+per tutti quei department_id  per cui la differenza tra massimo employee_id e minimo employee_id 
+coincide con il numero di record presenti nella tabella employees  con quel department_id */
+
+select department_id, max(employee_id), min(employee_id), count(employee_id), (max(employee_id) -  min(employee_id)) as differenza
+from employees
+group by department_id
+having (max(employee_id) -  min(employee_id)) = count(employee_id)
+
+/* 5. Dalla tabella countries selezionare per ogni region_id il country_name avente la lunghezza maggiore  */
+select c1.region_id, c1.country_name, length(c1.country_name)
+from countries c1
+where (c1.region_id, length(c1.country_name)) in (
+	select c2.region_id, max(length(c2.country_name))
+	from countries c2
+	group by c2.region_id 
+)
+
+
+/* 6. A partire dalle tabelle 'Marche' e 'Modelli' scrivere una query che restituisca tutte le informazioni delle case automobilistiche 
+ * che producono più di due modelli di automobili di tipo 'SPORT'  */
+
+select marche.*
+from marche natural join modelli
+group by marche.cod_casa
+having count(modelli.tipo) filter (where modelli.tipo = 'SPORT') > 2
+``` 
