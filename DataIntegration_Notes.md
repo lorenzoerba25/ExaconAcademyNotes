@@ -125,37 +125,37 @@ Successivamente colleghiamo il tPrejob al tDbConnection, che a sua volta risulte
 Passiamo ora a realizzare i metadati del file json dell'anagrafica e delle rilevazioni (per semplicità prendiamo le rilevazioni del sensore 20104).
 Dopo aver creato il metadato in Repository > File Json, in ultima battuta ci viene chiesto di specificare lo schema. Per il file dei sensori il risultato dovrà essere il seguente (importante rimuovere gli *underscore* da Column Name "coordinates__"):
 
-![alt text](image.png)
+![alt text](img/image.png)
 
 Importante spuntare *idsensore* come chiave e impostare *datastart* e *datastop* in tipo Date con formato "yyyy-MM-dd'T'HH:mm:ss.SSS":
 
-![alt text](image-3.png)
+![alt text](img/image-3.png)
 
 Mentre per quanto riguarda le rilevazioni (campo *idsensore* e *data* sono chiave e data ha il formato precedentemente indicato):
 
-![alt text](image-1.png)
-![alt text](image-4.png)
+![alt text](img/image-1.png)
+![alt text](img/image-4.png)
 
 Successivamenten configuriamo il componente tSetGlobalVar, che dovrà avere la seguente configurazione
 
-![alt text](image-2.png)
+![alt text](img/image-2.png)
 
 
 Procediamo ora a configurare i tCreateTable, dove andiamo a specificare che usiamo Postgresql, di usare una connessioine esistente (selezionandola) e come *Table Action: Create table if not exists". Trasciniamo poi la variabile *sensori_tabella* nel campo *Table Name* e trasciniamo lo schema *sensori_api_schema*.
 
-![alt text](image-5.png)
+![alt text](img/image-5.png)
 
 Analogamente facciamo per l'altro tCreateTable:
 
-![alt text](image-6.png)
+![alt text](img/image-6.png)
 
 Procediamo ora a configurare il tFileInputJSON, dove andiamo a trascinare lo schema *sensori_api_schema* sul componente, spuntiamo *Use Url* e trasciniamo la variabile globale *sensori_api* e infine spuntiamo l'ultima voce *Die on error*. Risultato:
 
-![alt text](image-7.png)
+![alt text](img/image-7.png)
 
 Infine colleghiamo i componenti nel seguente modo:
 
-![alt text](image-8.png)
+![alt text](img/image-8.png)
 
 Eseguendo poi il job possiamo notare se tutto quanto è ok. Se le configurazioni sono state eseguite correttamente, nel database avremo due nuove tabelle, vuote ma con lo schema che rispecchia la nostra API.
 
@@ -184,7 +184,7 @@ FROM "+((String)globalMap.get("sensori_tabella"))
 e modifichiamo lo schema del tDbInput lasciando solo i campi *idsensore* e *datastart*, in modo che coincidano col risultato della query.
 
 Configuriamo ora il tMap in questo modo:
-![alt text](image-10.png)
+![alt text](img/image-10.png)
 
 Possiamo notare che nuovi_sensori e sensori_variati hanno in output lo stesso schema di input, perché i nuovi sensori andranno salvati mentre i sensori variati, dovranno essere aggiornati (e non sappiamo cosa cambia oltre la datastart, quindi ci portiamo tutto), mentre i sensori invariati rimarranno tali.
 Andiamo quindi a eseguire in input una *INNER JOIN* tra il campo *from_API.idsensore* e *from_DB.idsensore*. Nel flusso *nuovi_sensori* andiamo a indicare in *Catch lookup inner join reject = true*. Questa opzione permette di trasferire lo scarto della inner join verso questo flusso (ciò che non rispetta l'uguaglianza tra *idsensore*). Questa tecnica consente di implementare una *LEFT ANTI JOIN* in quanto eseguiamo una *INNER JOIN* tra i due flussi in input e preleviamo i record che non matchano (ma solo della tabella di sinistra, in quanto la master table è sempre quella che proviene dal flusso *Main* arancione non tratteggiato). Quindi ricapitolando, questa opzione consente di fare una lookup con LEFT ANTI JOIN, eseguendo una INNER JOIN e prelevando come scarto i record della tabella di sinistra che non matchano con quella di destra (a differenza della LEFT JOIN non vengono completati con NULL).
@@ -203,11 +203,11 @@ Ora impostiamo la condizione `Var.vSameDate` sul flusso *sensori_invariati* e `!
 
 Ora colleghiamo tre tLogRow in uscita al tMap, nominando i flussi come all'interno del tMap e assegnando lo stesso nome anche ai tLogRow e colleghiamo il tDbCommit al primo tFileInputJson con collegamento *OnSubjobOk* ma che per il momento disattiviamo. Risultato:
 
-![alt text](image-11.png)
+![alt text](img/image-11.png)
 
 Ora procediamo a configurare il primo ramo, *nuovi_sensori*. In questo caso dobbiamo collegare al tLogRow un tDbOutput, poiché dobbiamo salvare i nuovi sensori letti. Lo schema dovrebbe essere associato automaticamente (in caso negativo trasciniamo il solito *schema_sensori_api*) e specifichiamo la tabella su cui agire con azione *Insert*.
 
-![alt text](image-12.png)
+![alt text](img/image-12.png)
 
 Colleghiamo al tDbOutput del flow *nuovi_sensori* il componente tFlowToIterate. Questo componente ci permette di passare da una logica di dataset a una logica di record. Più nel dettaglio, questo componente dichiara una chiave per ogni attributo del dataset di input e in base al record processato viene associato a quella chiave un valore pari al valore dell'attributo del record processato.
 
@@ -219,21 +219,21 @@ Configuriamo il nuovo tFileInputJSON trasciando il metadato delle rilevazioni su
 ((String)globalMap.get("rilevazioni_api_base")).replace("<id>",((Integer)globalMap.get("row3.idsensore")).toString())
 ```
 
-![alt text](image-14.png)
+![alt text](img/image-14.png)
 
 Infine colleghiamo un tDbOutput al tFileInputJSON che permetterà di scrivere le rilevazioni di ciascun sensore nella tabella.
 Lo configuriamo come gli altri, prestando attenzione a inserire lo schema delle rilevazioni:
 
-![alt text](image-15.png)
+![alt text](img/image-15.png)
 
 Ora passiamo a configurare il ramo *sensori_variati* per cui dobbiamo, per ogni sensore variato, aggiornare l'anagrafica e aggiornare da zero lo storico delle rilevazioni. 
 
 Per tanto procediamo a collegare al tLogRow un tDbOutput che eseguirà l'update della tabella *sensori_tabella*:
-![alt text](image-16.png)
+![alt text](img/image-16.png)
 
 Successivamente ci colleghiamo un tFlowToIterate, il qualle sensore per sensore dovrà procedere a fare la richiesta all'API delle rilevazioni, per cui necessitiamo di un tdBRow e tFileInputJSON.
 
-![alt text](image-17.png)
+![alt text](img/image-17.png)
 
 Il tDbRow conterrà:
 
@@ -244,13 +244,64 @@ Il tDbRow conterrà:
 
 in modo da eliiminare tutte le rilevazioni di quel sensore iterato e successivamente, quando il componente tDbRow é ok, e ha finito, procediamo a interrogare l'API rilevazioni, configurando il tFileInputJSON in questo modo:
 
-![alt text](image-18.png)
+![alt text](img/image-18.png)
 
 e a collegare al tFileInputJSON un tDbOutput che farà la *insert* delle nuove rilevazioni.
 
-![alt text](image-19.png)
+![alt text](img/image-19.png)
 
 
 Job completo:
 
-![alt text](image-20.png)
+![alt text](img/image-20.png)
+
+
+## Eserci Ingestion Delta
+Per ingestion delta intendiamo quando vogliamo integrare un particolare flusso di una determinata sorgente su un nostro *target* ma non in *full* (logica in cui prendiamo tutta la sorgente e la scriviamo sul target), bensì facciamo integrazione solo di quei record che hanno subito una modifica (sono nuovi record, sono stati modificati o sono stati eliminati) mentre lascio inalterati i record che non hanno subito modifica.
+
+Visualizzandola con un diagramma di Venn possiamo notare che i record che sono nell'intersezione sono i record che non hanno subito modifiche. I record presenti nella tabella sorgente ma non in target, sono i record nuovi, mentre i record presenti su target ma non su sorgente sono quelli da eliminare dal target:
+
+![alt text](img/image-21.png)
+### Soluzione con double left anti join
+Vediamo una prima soluzione, ovvero eseguire una doppia `LEFT ANTI JOIN`.
+
+Una prima soluzione potrebbe essere quella di impostare il job in due fasi: nella prima fase del job andremo ad effettuare una left anti join tra tabella sorgente e tabella target (così da trovare cosa è presente
+sulla tabella sorgente ma non sulla tabella target, quindi i record risultanti dovranno essere inseriti nella tabella target), nella seconda fase andremo invece ad effettuare una left anti join tra tabella target e
+tabella sorgente (così da trovare cosa e presente sulla tabella target ma non sulla tabella sorgente, quindi i record risultanti dovranno essere eliminati dalla tabella target). Nella prima fase andremo quindi a
+gestire INSERT e UPDATE sulla tabella sorgente mentre nella seconda andremo a gestire UPDATE e DELETE.
+Nota: gli UPDATE sono gestiti con entrambe le 'fasi' di questo job, questo perchè gli update sulla tabella sorgente vengono sostanzialmente trasformati in INSERT (nuovo record) e DELETE (vecchio record).
+NOTA BENE: i casi in cui negli esempi sottostanti c'e esito "/" sono automaticamente gestiti dal fatto che effettuiamo delle left anti join utilizzando come chiave di join tutti i campi delle tabelle.
+
+NOTA: il motivo per cui non utilizziamo una right anti join ma una doppia left anti join scambiando la tabella master e dovuto al fatto che su Talend non e possibile implementare una right anti join!
+
+### Soluzione con full outer join
+
+NOTA: nella soluzione precedente facciamo una left anti join seguita da una right anti join (perchè nella seconda left anti join scambiamo tabella target e tabella sorgente, quindi la seconda leftjoin potrebbe essere scritta come sorgente right anti join target) dunque
+concettualmente effettuiamo una full outer anti join.
+Potremmo infatti ottenere il risultato desiderato anche effettuando una full outer anti join utilizzando come chiave tutti i campi:
+- se nel risultato della full outer anti join sono presenti dei record con i campi della tabella target popolati e quelli della tabella sorgente a null allora questi record dovranno essere eliminati dalla tabella target (sono record presenti nella tabella target ma non nella tabella sorgente)
+- se nel risultato della full outer anti join sono presenti dei record con i campi della tabella sorgente popolati e quelli della tabella target a null allora questi record dovranno essere inseriti dalla tabella target (sono record presenti nella tabella sorgente ma non nella tabella target)
+- se nel risultato della full outer anti join sono presenti dei record con sia i campi della tabella target popolati sia quelli della tabella sorgente popolati allora NON dobbiamo controllare se i valori nelle due tabelle coincidano in quanto stiamo utilizzando come chiave di join tutti i
+campi, non si può quindi presentare la situazione in cui sono popolati i campi sia di sorgente che di target ma con valori diversi (per questi record quindi non dobbiamo effettuare cambiamenti nella tabella target).
+NOTA: II motivo per cui questa soluzione (che a livello di performance è sicuramente preferibile) non è stata presentata come principale è perchè nativamente su Talend non esiste un componente che permetta di effettuare la full outer join, ma essa deve essere simulata
+effettuando una left join ed una right join di cui si uniscono i risultati.
+
+### Soluzione doppia left hash
+Quando il numero di colonne nella tabella sorgente grande, il numero di confronti che deve essere effettuato tra sorgente e target per controllare se c'é coerenza tra i record chiaramente aumenta. Una strategia per ridurre il numero di confronti quella di creare un campo
+che contenga una 'sintesi' dei valori presenti nelle varje colonne del record cosi da poter effettuare il controllo di uguaglianza solo di quel valore. In caso il record sorgente ed il record target abbiano Io stesso valore di 'sintesil (che indicheremo con 'hash') allora significa che il
+record sorgente ed il record target saranno uguali, altrimenti significa che qualche valore nel record sorgente cambiato. La strategia da applicare resta quindi Ia stessa giå vista in precedenza, I'unica differenza rjguarda il valore su cui effettueremo il controllo di eguaglianza.
+Per ottimizzare ulteriormente il confronto possiamo creare nella tabella target un campo tecnico per salvare I'hash, cosi da non doverlo ricalcolare ogni volta (mentre ovviamente per i record della tabella sorgente dovremo effettuare il ricalcolo ogni volta).
+Per creare questo 'hash' possiamo concatenare i valori delle varie colonne di un record; se Ie colonne della tabella perö sono molte e contengono valori lunghi Ia stringa complessiva potrebbe diventare molto lunga. Per ottimizzare ulteriormente Ie performance del confronto
+dell'hash tra sorgente e target possibile utilizzare una funzione di hash (funzione che data in input una stringa di lunghezza arbitraria produce in output una stringa di lunghezza predefinita, la quale varia a seconda dell'algoritmo scelto) cosi da effettuare dei controlli su
+stringhe aventi sempre la stessa lunghezza.
+
+### Implementazione doppia left anti join
+Per implementare la soluzione con doppia left anti join in Talend abbiamo bisogno di:
+- tPreJob,tPostJob, tDbConnection e tDbCommit per configurare l'apertura e chiusura della connessione
+- tDbInput x4
+- tMap x2
+- tDbOutput x2
+In prima battuta impostiamo gli inserimenti e quindi abbiamo bisogno di configurare un tDbInput dove leggiamo dalla sorgente con una semplice `SELECT * FROM sorgente` e configuriamo un secondo tDbInput dove leggiamo dal target, con una semplice `SELECT * FROM target`. 
+Ora colleghiamo come *master-table* la sorgente al tMap e facciamo una *lookup* sul target. In questo caso il tMap dovrà fare una inner join tra tutti i campi di sorgente e target e in uscita andiamo a *flaggare* il campo *catch lookup inner join reject* dove andiamo a specificare sempre lo stesso schema e mapperemo come record tutti quelli che sono scartati dall'inner join (rispetto alla tabella di sinistra). Quindi abbiamo implementato una `LEFT ANTI JOIN`. Infine in uscita al tMap colleghiamo un tDbOutput dove andremo a inserire effettivamente i record ottenuti nella tabella target configurandolo per una `INSERT`. Importante notare che lo schema della tabella target deve comprendere un campo `TIMESTAMP` che rappresenta il momento in cui quel record è stato inserito (o modificato, anche se per noi la modifica è un nuovo inserimento). Quindi nella scheda *Advanced Settings* del tDbOutput, specifichiamo una *additional-columns* chiamata *ts_read* con valore *current_timestamp* posizionata in coda all'ultimo campo.
+
+Analogamente facciamo per la delete, tenendo come *master-table* la tabella target (in quanto vogliamo trovare tutti i record di target che non compaiono in sorgente per poterli eliminare). Successivamente andiamo a configurare il tMap e il tDbOutput per effettuare una `DELETE`. Importante in questo caso specificare, sia per il tDbInput che tDbOutput, i campi come chiave sullo schema in quanto la delete con tDbOutput viene costruita a partire dai campi chiave nello schema.
