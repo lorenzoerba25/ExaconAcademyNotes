@@ -595,6 +595,131 @@ A questo punto risulta importante indicare come il DBMS (DataBase Management Sys
 6. LIMIT -> Se presente il DBMS preleva solo i primi n record da proiettare
 
 ## Join
+Dopo aver visto le query basilari, dove solitamente abbiamo una sola relazione nella clausola `FROM`, introduciamo il predicato di `JOIN` che consente di stabilire delle associazioni tra più relazioni, operando pertanto su più tabelle all'interno della stessa query.
+Per prima cosa l'operazione di join può essere vista come un metodo che consente di affiancare le informazioni di una tabella ad un altra rispetto a un predicato, detto **predicato di join**. Nel dettaglio noi specifichiamo un predicato per cui, presa una riga della tabella uno e una riga della tabella di destra, se è vero i due record vengono affiancati altrimenti se il predicato è falso l'associazione si perde e le due righe non compariranno affiancate.
+Vediamo un esempio in pseudo-codice:
+
+Supponiamo di possedere le relazioni Studente ed Esami, dove:
+- matricola è la chiave primaria di Studente
+- codiceEsame è la chiave di Esame
+- codiceEsame è presente anche in Studente come chiave esterna (*foreign key*) rispetto alla relazione Esami. Quindi per ogni studente possiamo tenere traccia dell'esame frequentato.
+
+Ora se volessimo ottenere l'esame frequentato da ciascuno studente basterebbe fare:
+```sql
+SELECT matricola,codiceEsame
+FROM Studente
+```
+Ma se volessimo reperire anche il numero di CFU dell'esame? Questa informazione non è presente in Studente, bensì in Esami. Per tale motivo dobbiamo fare un operazione di *lookup*, ovvero a partire da Studenti diamo uno "sguardo" a Esami, portandoci in output i campi necessari. Un primo esempio potrebbe essere:
+```sql
+SELECT matricola,codiceEsame,cfu
+FROM Studente,Esami
+```
+In questo modo indichiamo due relazioni nella `FROM` e il DBMS calcolerà il prodotto cartesiano tra esse. Il prodotto cartesiano di due insiemi (in questo caso due relazioni) restituisce tutte le combinazioni possibili del primo insieme con il secondo (quindi preso uno studente verrà accoppiato con tutti gli esami presenti in Esami). Ovviamente questo risultato non ci piace, perchè non vogliamo che lo studente con matricola `123` venga associato a tutti gli esami presenti ma solo a quello che lui segue. Quindi una possibile modifica che possiamo fare è filtrare il risultato controllando per ogni riga che il codiceEsame di Studente coincide con il relativo codiceEsame di Esami (in questo caso dobbiamo usare la notazione *relazione.campo* in quanto potremmo avere ambiguità sullo stesso nome, il dbms non sa a quale relazione facciamo riferimento a parità di nome di attributo. Quindi possiamo assegnare un alias alle relazioni o usare il nome delle relazioni originale):
+```sql
+SELECT matricola,codiceEsame,cfu
+FROM Studente s,Esami e
+WHERE s.codiceEsame = e.codiceEsame
+```
+La query appena descritta restituisce il risultato aspettato ma poichè abbiamo introdotto le `JOIN` è opportuno notare che quanto indicato nella clausola `WHERE` non è nient'altro che il **predicato di join**, ovvero un predicato/condizione per cui solo le tuple che trovano match tra le due tabelle vengono affiancate. Come indicato nel paragrafo precedente il DBMS esegue prima la `FROM` e poi la `WHERE`. Quindi in questo caso stiamo facendo il prodotto cartesiano tra due relazioni (operazione molto costosa) e poi filtriamo il risultato. La soluzione migliore e più efficiente è usare il predicato di `JOIN` nella clausola `FROM` indicando il predicato di join tra le relazioni. La sintassi del predicato di `JOIN` è:
+```sql
+FROM <nome relazione> JOIN <nome relazione> ON <predicato di join>
+```
+dove:
+- `<nome relazione>` è il nome della prima relazione
+- `<nome relazione>` è il nome della seconda relazione (possono essere uguali prima e seconda)
+- `<predicato di join>` è la condizione per cui se è vera, la riga della tabella di sinistra e la riga della tabella di destra vengono unite rispettando questa condizione.
+Dal punto di vista logico la `JOIN` si può leggere come "per ogni riga della tabella di sinitra uniscila alla riga della tabella di destra se il predicato tra queste due righe è vero". Quindi la `FROM` ci da in output uno schema (insieme di colonne) che è l'unione dei due schemi.
+
+Nel nostro caso possiamo applicare la join ottenendo:
+```sql
+SELECT matricola,codiceEsame,cfu
+FROM Studente s JOIN Esami e ON s.codiceEsame = e.codiceEsame
+```
+Ovviamente il predicato di `JOIN` è una qualsiasi condizione booleana per cui possiamo usare tutti gli operatori di confronto come `>,<,=>,<=, <>, =`.
+
+Nelle join solitamente si opera andando a indicare nel predicato di join una condizione booleana sulle chiavi delle relazioni (primaria/esterna) in quanto garantiscono univocità dei record, ma nulla ci vieta di operare su campi che non sono chiave (in questo caso potremmo aspettarci più match in quanto non operiamo su valori univoci).
+
+Inoltre quando si usano le join solitamente è comodo rinominare una relazione assegnando un alias, sia per praticità, che per evitare ambiguità di riferimento.
+
+Vediamo altri esempi:
+```sql
+/* Restituire nome,cognome dei dipendenti nati dopo il 2000 e sede del dipartimento in cui lavorano*/
+SELECT d.nome, d.cognome, d2.sede
+FROM Dipendente d JOIN Dipartimento d2 ON d.id_dipartimento = d.id_dipartimento
+WHERE d.data_di_nascita >= '1/1/2001'
+
+/* Restituire i film con lo stesso regista ma titolo diversi */
+SELECT f1.
+FROM Film f1 JOIN Film f2 ON f1.regista=f2.regista AND f1.titolo <> f2.titolo
+```
+
+Vediamo ora altre tipologie di JOIN.
+Un esempio di JOIN che abbiamo già visto è la `CROSS JOIN` che computa il prodotto cartesiano e per cui non è richiesto un predicato (equivale a fare `FROM r1,r2`).
+
+Più importanti sono invece le `OUTER JOIN` che si suddividono in:
+- `LEFT JOIN`
+- `RIGHT JOIN`
+- `FULL OUTER JOIN`
+- `LEFT ANTI JOIN`
+- `RIGHT ANTI JOIN`
+- `FULL OUTER ANTI JOIN`
+
+Procedendo in ordine e introduciamo la `LEFT JOIN`. Da un punto di vista di esecuzione della query la `LEFT JOIN` permette sempre di eseguire un'operazione di `JOIN` tra le due relazioni ma oltre a restituire i record che soddisfano il predicato di join restituisce anche tutti i record della tabella di sinistra che non soddisfano la condizione di join. Siccome la `JOIN` restituisce uno schema che è l'unione dei due schemi, nel caso della `LEFT JOIN` le tuple della tabella di sinistra che non soddisfano la condizione di join vengon completate con valori `NULL` nei campi della tabella di sinistra.
+
+Da un punto di vista insiemistico la `LEFT JOIN` può essere vista in questo modo:
+
+![alt text](image-2.png)
+
+La sintassi della `LEFT JOIN` è:
+```sql
+FROM <nome relazione> LEFT JOIN <nome relazione> ON <predicato di join>
+```
+Esempi di utilizzo è per esempio ottenere l'elenco di tutti i proprietari e le loro eventuali auto, inclusi quelli che non ne possiedono.
+
+```sql
+SELECT p.nome, p.cognome, a.targa
+FROM Proprietari p LEFT JOIN Auto a ON p.id_propriterario = a.id_proprietario
+```
+In questo caso un possibile risultato potrebbe essere:
+
+| Nome     | Cognome | Targa |
+| -------- | ------- | ------- |
+| Mario    | Rossi    | AA123BB |
+| Francesco | Neri     | AA124CC |
+| Luigi    |  Verdi    | NULL |
+
+Da qui possiamo capire che Luigi Verdi non possiede nessuna auto.
+
+La `RIGHT JOIN` opera ugualmente ma semplicemente calcola la join a partire dalla tabella di destra. Per cui restituisce tutte le tuple che soddisfano il predicato di join e le tuple della tabella di destra che non lo soddisfano vengono completate con `NULL` nei campi della tabella di sinistra. 
+
+Da un punto di vista insiemistico la `RIGHT JOIN` può essere vista in questo modo:
+
+![alt text](image-3.png)
+
+La sintassi della `RIGHT JOIN` è:
+```sql
+FROM <nome relazione> RIGHT JOIN <nome relazione> ON <predicato di join>
+```
+Esempi di utilizzo è per esempio ottenere l'elenco di tutte le auto e dei loro eventuali proprietari, quindi anche auto senza proprietario.
+
+```sql
+SELECT p.nome, p.cognome, a.targa
+FROM Proprietari p RIGHT JOIN Auto a ON p.id_propriterario = a.id_proprietario
+```
+
+In questo caso un possibile risultato potrebbe essere:
+
+| Nome     | Cognome | Targa |
+| -------- | ------- | ------- |
+| Mario    | Rossi    | AA123BB |
+| Francesco | Neri     | AA124CC |
+| NULL    |  NULL    | XX999ZZ |
+
+Da qui possiamo capire che l'auto targata XX999ZZ non ha nessun proprietario associato.
+
+Introduciamo ora la `FULL OUTER JOIN` che può essere vista come l'unione delle due precedenti join, rispettivamente `LEFT JOIN` e `RIGHT JOIN`.
+
+
 
 ## Operatori insiemistici
 `UNION`,`INTERSECT` e `EXCEPT`.
