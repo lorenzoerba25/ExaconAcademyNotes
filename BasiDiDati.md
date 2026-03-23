@@ -641,6 +641,8 @@ Nelle join solitamente si opera andando a indicare nel predicato di join una con
 
 Inoltre quando si usano le join solitamente è comodo rinominare una relazione assegnando un alias, sia per praticità, che per evitare ambiguità di riferimento.
 
+Spesso il predicato di `JOIN` in molti DBMS assume il nome di `INNER JOIN` rappresentando di fatto la stessa operazione.
+
 Vediamo altri esempi:
 ```sql
 /* Restituire nome,cognome dei dipendenti nati dopo il 2000 e sede del dipartimento in cui lavorano*/
@@ -717,9 +719,112 @@ In questo caso un possibile risultato potrebbe essere:
 
 Da qui possiamo capire che l'auto targata XX999ZZ non ha nessun proprietario associato.
 
-Introduciamo ora la `FULL OUTER JOIN` che può essere vista come l'unione delle due precedenti join, rispettivamente `LEFT JOIN` e `RIGHT JOIN`.
+Introduciamo ora la `FULL OUTER JOIN` che può essere vista come l'unione delle due precedenti join, rispettivamente `LEFT JOIN` e `RIGHT JOIN`. Di fatti questo tipo di join restituisce le tuple della tabella di sinistra unite a quella di destra se rispettano il predicato di join e poi completa:
+- le tuple della tabella di sinistra che non hanno trovato un match con `NULL` nei campi della tabella di destra (eseguiamo di fatto una left join)
+- le tuple della tabella di destra che non hanno trovato un match con `NULL` nei campi della tabella di sinistra (eseguiamo di fatto una right join)
 
+Da un punto di vista insiemistico la `FULL OUTER JOIN` può essere vista in questo modo:
 
+![alt text](image-4.png)
+
+La sintassi della `FULL OUTER JOIN` è:
+```sql
+FROM <nome relazione> FULL JOIN <nome relazione> ON <predicato di join>
+```
+Esempi di utilizzo è per esempio ottenere l'elenco di tutte le opere che sono esposte al museo compresi i musei che non hanno opere e le opere non esposte.
+
+```sql
+SELECT o.nome, m.località
+FROM Opere o FULL JOIN Musei m ON o.id_museo = m.id_museo
+```
+
+In questo caso un possibile risultato potrebbe essere:
+
+| Nome     | Località |
+| -------- | ------- |
+| Gioconda    | Louvre    |
+| NULL       | Uffizi     |
+| Guernica    |  NULL    |
+
+Da qui possiamo capire che la Gioconda è esposta al Louvre mentre gli Uffizi non hanno nulla esposto e analogamente Guernica non è esposto in alcun museo.
+
+Ora introduciamo le `ANTI JOIN` che rispettano il funzionamento delle precedenti `OUTER JOIN` ma aggiugnendo un predicato di selezione nella `WHERE` per filtrare il risultato. Di fatti nelle `OUTER JOIN` viste fino ad ora avevamo sempre in output l'intersezione dei due insiemi (di fatto il risultato di una inner join) mentre con le anti join andiamo a eliminare questa parte in quanto vogliamo sempre e solo la parte di risultato completata con `NULL`. 
+
+Per la `LEFT ANTI JOIN` possiamo notare che il risultato insiemistico coincide con:
+
+![alt img](image-5.png)
+
+E da un punto di vista sintattico abbiamo:
+```sql
+FROM <relazione_sx> LEFT JOIN <relazione_dx> ON <predicato di join>
+WHERE relazione_dx.key IS NULL
+```
+Possiamo notare come di fatto eseguiamo una `LEFT JOIN` andando a filtrare poi quei record completati con `NULL`. 
+Un esempio potrebbe essere quello di reperire il nome di studenti che non frequentano esami
+```sql
+SELECT s.nome, s.codiceEsame
+FROM Studenti s LEFT JOIN Esami e ON s.codiceEsame = e.codiceEsame
+WHERE e.codiceEsame IS NULL
+```
+In questo caso un possibile risultato potrebbe essere:
+
+| Nome     | CodiceEsame |
+| -------- | ------- |
+| Mario    | NULL    |
+| Luigi    | NULL     |
+
+Analogamente funziona la `RIGHT ANTI JOIN` che in questo caso restituisce solo i record della tabella di destra completati con `NULL`.
+
+Da un punto di vista insiemistico abbiamo:
+
+![alt text](image-6.png)
+
+E la sintassi della `RIGHT ANTI JOIN`:
+```sql
+FROM <relazione_sx> LEFT JOIN <relazione_dx> ON <predicato di join>
+WHERE relazione_sx.key IS NULL
+```
+
+Un esempio potrebbe essere quello di reperire il nome degli esami non frequentati da studenti
+```sql
+SELECT s.nome, s.codiceEsame
+FROM Studenti s LEFT JOIN Esami e ON s.codiceEsame = e.codiceEsame
+WHERE s.matricola IS NULL
+```
+In questo caso un possibile risultato potrebbe essere:
+
+| Nome     | CodiceEsame |
+| -------- | ------- |
+|  NULL   |   Matematica  |
+|   NULL  |   Scienze   |
+
+Infine introduciamo la `FULL OUTER ANTI JOIN` che di fatto è l'unione della `LEFT ANTI` e `RIGHT ANTI`.
+
+Dal punto di vista insiemistico abbiamo:
+
+![alt text](image-7.png)
+
+La sintassi della `FULL OUTER ANTI JOIN` è:
+```sql
+FROM <relazione_sx> FULL JOIN <relazione_dx> ON <predicato di join>
+WHERE relazione_sx.key IS NULL OR relazione_dx.key IS NULL
+```
+Un esempio di utilizzo può essere reperire le persone che non hanno un auto e le auto senza proprietario:
+```sql
+SELECT p.nome, p.cognome, a.targa
+FROM Proprietari p FULL JOIN Auto a ON p.id_proprietario = a.id_proprietario
+WHERE p.id_proprietario IS NULL OR  a.targa IS NULL
+```
+
+Un possibile risultato è:
+
+| Nome     | Cognome | Targa |
+| -------- | ------- | ------- |
+| Mario    | Rossi    | NULL |
+| NULL | NULL     | AA124CC |
+| NULL    |  NULL    | XX999ZZ |
+
+Importante notare come nel predicato di selezione della `WHERE` nelle `ANTI JOIN` non controlliamo che tutti i campi siano `NULL` ma per praticità operiamo direttamente sulla chiave della relazione.
 
 ## Operatori insiemistici
 `UNION`,`INTERSECT` e `EXCEPT`.
