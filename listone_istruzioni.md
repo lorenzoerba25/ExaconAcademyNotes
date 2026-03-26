@@ -394,3 +394,50 @@ Se vogliamo testare condizioni di visibilità, non visibilità o cambio di stato
 private final By cookiesModal = By.cssSelector("[data-testid='cookie-modal-content']");
 ```
 dobbiamo usare metodi come `visibilityOfElementLocated`. Questo avviene principalmente perchè nel primo caso PageFactory ha già creato un "contenitore" per l'elemento. Le ExpectedConditions che lavorano su un oggetto già esistente si aspettano che tu glielo passi direttamente, mentre nel secondo caso Selenium deve prima andare nel DOM, cercarlo e poi verificare la condizione.
+
+Vediamo ora come trattare nel dettaglio i componenti chiamati *iFrame*. Un iFrame incorpora un documento HTML separato nella pagina corrente. Poiché ha un proprio DOM, Selenium non può interagire direttamente con i suoi elementi. È necessario spostare esplicitamente il focus di WebDriver sull'iframe prima di interagire, e tornare al documento principale al termine dell'operazione. In HTML gli iframe sono identificati dal tag specifico `<iframe>`.
+
+Lato istruzioni in Selenium utilizziamo il comando `driver.switchTo().frame()` dove andiamo a specificare di cambiare contesto e passare dal contesto di default (attuale) all'interno di uno specifico iframe. Il metodo `frame` richiede un parametro che permetta di identificare l'iframe in cui posizionari. Tale parametro può essere:
+- un'intero che rappresenta l'indice (posizione) dell'iframe nella pagina (il primo coincide con indice 0)
+- una stringa che rappresenta il valore assunto dal tag `<id>` o `<name> ` dell'iframe. In caso di molteplici iframe restituiti viene selezionato il primo
+- un WebElement che rappresenta l'oggetto iframe recuperato tramite `driver.findElement()`
+
+Una volta selezionato un iframe possiamo navigare al suo interno e procedere a cercare gli elementi contenuti (elementi figlio) dell'iframe. Per esempio
+```java
+@Test
+public void test_iframe() {
+    driver.switchTo().frame(driver.findElement(By.id("iframe1")));
+    String paragraph = driver.findElement(By.id("iframe-paragraph")).getText();
+    assertEquals(paragraph, "This is the page number 1.");
+}
+```
+
+Dopo esserci posizionati all'interno di un iframe non possiamo cercare elementi presenti in un altro DOM, per esempio nella pagina principale. Per ritornare al contesto precedente (di default) utilizziamo l'istruzione `driver.switchTo().defaultContent()` che consente di ripristinare la nostra posizione nel DOM princiapele.
+```java
+@Test
+public void test_default_content() {
+    driver.switchTo().frame("iframe1");
+    String iFrameTitle = driver.findElement(By.id("title")).getText();
+    assertEquals(iFrameTitle, "iFrame Page 1");
+    driver.switchTo().defaultContent();
+    String mainPageTitle = driver.findElement(By.id("title")).getText();
+    assertEquals(mainPageTitle, "Main Page");
+}
+```
+
+Inoltre un iframe può essere presente all'interno di un altro iframe. In questo caso utiliziamo il comando `switchTo().frame()` in cascata per raggiungere l'iframe desiderato.
+```java
+@Test
+public void test13() {
+    driver.switchTo().frame("iframe1");
+    String iFrame1Title = driver.findElement(By.id("title")).getText();
+    assertEquals(iFrame1Title, "iFrame Page 1");
+    driver.switchTo().frame("iframe2");
+    String iFrame2Title = driver.findElement(By.id("title")).getText();
+    assertEquals(iFrame2Title, "iFrame Page 2");
+    driver.switchTo().frame("iframe3");
+    String iFrame3Title = driver.findElement(By.id("title")).getText();
+    assertEquals(iFrame3Title, "iFrame Page 3");
+
+}
+```
