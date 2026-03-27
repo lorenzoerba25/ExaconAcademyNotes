@@ -885,13 +885,184 @@ Prima di introdurre i vari *design pattern* più utilizzati, è importante sotto
 - **Open-Closed**. Le classi devono essere aperte alle estensioni (nuove funzionalità) ma chiuse alle modifiche. Si ottiene usando interfacce e polimorfismo invece di modificare il codice esistente.
 - **Liskov Substitution**. Una sottoclasse deve poter sostituire la sua classe base senza rompere il programma. Se `Quadrato` estende `Rettangolo` ma ne altera il comportamento logico, stai violando questo principio.
 - **Interface Segregation**. Un'interfaccia non dovrebbe costringere una classe a implementare metodi che non le servono. Meglio avere tante interfacce piccole che una interfaccia grande che contiene tutti i metodi.
-
-## Design pattern
-I design pattern in informatica rappresentano una collezione di soluzioni e stili adottabili per risolvere problemi ricorrenti e fornire una versione "standardizzata" ed efficiente del design di un componente (indipendentemente che sia una classe, un'architettura di rete o altri elementi in ambito IT).
-
-Prima di introdurre i vari *design pattern* più utilizzati, è importante sottolineare che indipendentemente dalla loro applicazione è consigliato adottare uno stile di programmazione che segua il principio **SOLID**:
-- **Single Responsibility**. Una classe deve avere un solo compito. Se una classe gestisce sia la gestione dei pagamenti che la comunicazione col database non va bene, meglio dividerla in due.
-- **Open-Closed**. Le classi devono essere aperte alle estensioni (nuove funzionalità) ma chiuse alle modifiche. Si ottiene usando interfacce e polimorfismo invece di modificare il codice esistente.
-- **Liskov Substitution**. Una sottoclasse deve poter sostituire la sua classe base senza rompere il programma. Se `Quadrato` estende `Rettangolo` ma ne altera il comportamento logico, stai violando questo principio.
-- **Interface Segregation**. Un'interfaccia non dovrebbe costringere una classe a implementare metodi che non le servono. Meglio avere tante interfacce piccole che una interfaccia grande che contiene tutti i metodi.
 - **Dependency Inversion**. Bisogna dipendere dalle astrazioni (interfacce), non dalle implementazioni concrete. Questo rende il codice facilmente testabile e modulare.
+
+Vediamo di seguito alcuni esempi di implementazione dei principi **SOLID**.
+
+**Open Closed** consente di realizzare classi aperte a estensioni ma chiuse a modifiche (non si cambia il codice pre-esistente).
+```java
+interface Sconto {
+    double calcola(double prezzo);
+}
+
+class ScontoNormale implements Sconto {
+    public double calcola(double prezzo) {
+        return prezzo;
+    }
+}
+
+class ScontoVIP implements Sconto {
+    public double calcola(double prezzo) {
+        return prezzo * 0.8;
+    }
+}
+
+// Utilizzo
+Sconto sconto = new ScontoVIP();
+double totale = sconto.calcola(100);
+
+// Se vogliamo aggiungere una nuova funzionalità basta fare
+
+class ScontoBlackFriday implements Sconto {
+    public double calcola(double prezzo) {
+        return prezzo * 0.5;
+    }
+}
+```
+
+**Liskov Substitution** prevede che le istanze di una classe figlia possono sostituire le istanze di una classe padre senza rompere il programma.
+```java
+public class Padre{
+    public void a() {}
+
+    public void b() {}
+
+    public void c() {}
+}
+
+
+public class Figlio extends Padre{
+    @Override
+    public void a() {
+        throw new UnsupportedOperationException("prova");
+    }
+
+    @Override
+    public void b() {
+        throw new UnsupportedOperationException("prova");
+    }
+}
+```
+In questo caso il figlio non può comportarsi come il padre perchè overrida i metodi ma fornisce un implementazione differente. Quindi una soluzione è applicare la chiamata `super.metodo()` nei metodi del figlio e in questo caso avremmo lo stesso comportamento, oppure se volessimo implementare delle funzionalità aggiuntive senza rompere LS potremmo far si che figlio e padre ereditano da una classe comune che fornisce il comportamento base:
+```java
+public class Comune {
+    public void a() {}
+    public void b() {}
+}
+
+public class Figlio extends Comune{
+    @Override
+    public void a() {
+        super.a();
+    }
+
+    @Override
+    public void b() {
+        super.b();
+    }
+}
+
+public class Padre extends Comune{
+    @Override
+    public void a() {}
+
+    @Override
+    public void b() {}
+
+    public void c() {}
+}
+```
+
+**Interface Segregation** ci consiglia di usare molteplici interfacce piccole piuttosto che una singola grande che obbliga le altre classi a implementare metodi che non le servono.
+```java
+
+```java
+
+//invece che usare 
+interface Stampante {
+    void stampaDocumento();
+    void scansionaDocumento();
+    void faxDocumento();
+}
+
+//meglio fare
+interface Stampante {
+    void stampaDocumento();
+}
+
+interface Scanner {
+    void scansionaDocumento();
+}
+
+interface Fax {
+    void faxDocumento();
+}
+```
+Infine abbiamo **Dependency Inversion** che ci consiglia di non scrivere codice che dipende direttamente dalle implementazioni concrete (classi che implementano una o piu interfacce) ma di scrivere codice che dipende dall'interfaccia così possiamo cambiare l'implementazione senza cambiare l'intero servizio.
+
+Nel nostro caso creiamo un'interfaccia `IDao` che viene implementata da due differenti classi, `TestDao` e `Dao`.
+Ora creando una classe `Servizio` con all'interno un oggetto di tipo `IDao` possiamo comodamente cambiare implementazione senza modificare `Servizio`.
+```java
+public interface IDao {
+    List<String> select();
+    Optional<String> selectOne();
+}
+
+@AllArgsConstructor
+public class Dao implements IDao {
+    private String con;
+    private String altro;
+
+    @Override
+    public List<String> select() {
+        System.out.println("faccio una query al db vero");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Optional<String> selectOne() {
+        System.out.println("faccio una query al db vero");
+        return Optional.empty();
+    }
+}
+
+public class TestDao implements IDao {
+    @Override
+    public List<String> select() {
+        System.out.println("test finto");
+        return List.of();
+    }
+
+    @Override
+    public Optional<String> selectOne() {
+        System.out.println("test finto");
+        return Optional.empty();
+    }
+}
+
+public class Servizio {
+
+    private IDao dao;
+
+    public Servizio(IDao dao) {
+        this.dao = dao;
+    }
+
+    public List<String> getAll() {
+        return dao.select();
+    }
+
+    public Optional<String> getById(Long id) {
+        return dao.selectOne();
+    }
+}
+```
+
+Infine nel main possiamo fare:
+```java
+IDao daoVero = new Dao("conn", "altro");
+Servizio servizioReale = new Servizio(daoVero);
+
+IDao daoFinto = new TestDao();
+Servizio servizioTest = new Servizio(daoFinto);
+```
