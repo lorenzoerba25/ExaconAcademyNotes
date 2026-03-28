@@ -1066,3 +1066,158 @@ Servizio servizioReale = new Servizio(daoVero);
 IDao daoFinto = new TestDao();
 Servizio servizioTest = new Servizio(daoFinto);
 ```
+
+Ora introduciamo alcuni design-patterns che non rientrano nei principi **SOLID** ma che semplificano la struttura del codice.
+
+Il primo pacchetto di design pattern che introduciamo sono i creational, utilizzati solitamente per dare un set di regole per la creazione di oggetti.
+- **Builder pattern**: consente di istanziare un oggetto senza passare dal costruttore parametrico, bensì crearlo aggiungendo un "mattone" alla volta, molto utile qual'ora vogliamo istanziare un oggetto senza specificare inizialmente tutti i campi. In questo esempio vediamo un esempio di implementazione del builder pattern (anche se solitamente si usano annotazioni come `@Builder` in Lombok):
+```java
+public class PersonaBuilder {
+    private static Persona p = null;
+
+    public PersonaBuilder() {
+        p = new Persona();
+    }
+
+    public PersonaBuilder name(String name) {
+        p.setName(name);
+        return this;
+    }
+
+    public PersonaBuilder surname(String surname) {
+        p.setName(surname);
+        return this;
+    }
+
+    public PersonaBuilder dob(LocalDate dob) {
+        p.setDataDiNascita(dob);
+        return this;
+    }
+
+    public PersonaBuilder codFisc(String codFisc) {
+        p.setCodiceFiscale(codFisc);
+        return this;
+    }
+
+    public Persona build() {
+        return p;
+    }
+}
+
+//utilizzo dove creo una persona solo con nome e codice fiscale
+PersonaBuilder pb = new PersonaBuilder()
+                .name("sempronio")
+                .codFisc("ashdfa")
+                .build();
+```
+- **Factory pattern**: consente di definire un'interfaccia per creare un oggetto, ma lascia che le sottoclassi decidano quale oggetto istanziare. In questo esempio vediamo che la classe `MazeGame` fornisce un costruttore che crea due room appoggiandosi al metodo interno `makeRoom`. Le classi che estendo `MazeGame` possono overridare il metodo `makeRoom` per creare un oggetto di tipo diverso:
+```java
+public class MazeGame {
+  public MazeGame() {
+     Room room1 = makeRoom();
+     Room room2 = makeRoom();
+     room1.connect(room2);
+     this.addRoom(room1);
+     this.addRoom(room2);
+  }
+
+  protected Room makeRoom() {
+     return new OrdinaryRoom();
+  }
+}
+public class MagicMazeGame extends MazeGame {
+  @Override
+  protected Room makeRoom() {
+      return new MagicRoom();
+  }
+}
+
+//Altra soluzione con la classe factory che in base a un certo parametro istanzia un certo tipo di oggetto
+```java
+public class ServiceFactory {
+    public static Service getService(Lang lang) {
+        return switch (lang) {
+            case ITA -> new ITService();
+            case ENG_UK -> new UKService();
+            case ENG_US -> new USService();
+        };
+    }
+
+    public enum Lang {
+        ITA,
+        ENG_UK,
+        ENG_US
+    }
+}
+```
+- **Prototype pattern**: permette di creare nuovi oggetti clonando un oggetto iniziale, detto appunto prototipo. Vediamo un esempio con l'utilizzo dell'interfaccia `Clonable`:
+```java
+// 1. Definiamo la classe che implementa Cloneable
+class Report implements Cloneable {
+    private String contenuto;
+    private String titolo;
+
+    public Report(String titolo) {
+        this.titolo = titolo;
+        // Simuliamo un'operazione pesante (es. fetch da DB)
+        this.contenuto = "Dati pesanti caricati..."; 
+    }
+
+    public void setContenuto(String contenuto) {
+        this.contenuto = contenuto;
+    }
+
+    public void stampa() {
+        System.out.println("Report: " + titolo + " | Contenuto: " + contenuto);
+    }
+
+    // 2. Sovrascriviamo il metodo clone()
+    @Override
+    public Report clone() {
+        try {
+            return (Report) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+    }
+}
+
+// 3. Utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // Creiamo l'oggetto originale (operazione costosa)
+        Report originale = new Report("Mensile");
+        
+        // Creiamo una copia esatta senza rieseguire la logica del costruttore
+        Report copia = originale.clone();
+        copia.setContenuto("Dati aggiornati per la copia");
+
+        originale.stampa();
+        copia.stampa();
+    }
+}
+```
+- **Singleton pattern**: garantisce che una classe abbia una sola istanza in tutta l'esecuzione del programma e a fornire un unico punto di accesso globale a quell'istanza. Solitamente una classe che usa il pattern singleton fornisce;
+  - un attributo privato riferito all'oggetto da creare
+  - un costruttore privato utilizzato solo internamente per creare la prima volta l'istanza
+  - un metodo statico custom che invoca il costruttore privato la prima volta mentre le altre volte restituisce l'istanza creata la prima volta
+```java
+public class Persona {
+    private String name;
+    private String surname;
+
+    private static Persona p = null;
+
+    private Persona(String name, String surname) {
+        this.name = name;
+        this.surname = surname;
+    }
+
+    public static Persona getPersona(String name, String surname) {
+        if (p == null) {
+            p = new Persona(name, surname);
+        }
+        return p;
+    }
+}
+```
