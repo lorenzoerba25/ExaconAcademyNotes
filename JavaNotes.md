@@ -1221,3 +1221,99 @@ public class Persona {
     }
 }
 ```
+
+Un altro pacchetto di design pattern che introduciamo è il behavioral pattern che descrivono come gli oggetti comunicano e si distribuiscono le responsabilità fra di loro.
+- **Strategy Pattern**: utilizzato per poter cambiare comodamente strategia di esecuzione senza dover modificare di volta in volta la classe.
+```java
+public interface NumberValidator {
+    boolean validate(int n);
+}
+
+public class EvenValidator implements NumberValidator{
+    @Override
+    public boolean validate(int n) {
+        return n % 2 == 0;
+    }
+}
+
+public class OddValidator implements NumberValidator{
+    @Override
+    public boolean validate(int n) {
+        return n % 2 != 0;
+    }
+}
+
+public class NumberService {
+    private List<NumberValidator> validators;
+
+    public NumberService(List<NumberValidator> validators) {
+        this.validators = validators;
+    }
+
+    public boolean validate(int n) {
+        for (NumberValidator validator : validators) {
+            if (!validator.validate(n)) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+//utilizzo
+List<NumberValidator> validators = List.of(
+                new EvenValidator(),
+                new PositiveValidator()
+        );
+NumberService numberService = new NumberService(validators);
+```
+- **State pattern**: si usa quando un oggetto deve cambiare drasticamente il suo comportamento a seconda del suo stato interno. Sembra simile allo Strategy, ma qui gli stati spesso "conoscono" gli altri stati e sanno quando passare da uno all'altro.
+```java
+interface Stato {
+    void clickPlay(Lettore lettore);
+}
+
+// Stato: In Riproduzione
+class PlayingState implements Stato {
+    public void clickPlay(Lettore lettore) {
+        System.out.println("Musica in pausa...");
+        lettore.setStato(new PausedState()); // Cambia stato a Pausa
+    }
+}
+
+// Stato: In Pausa
+class PausedState implements Stato {
+    public void clickPlay(Lettore lettore) {
+        System.out.println("Musica avviata!");
+        lettore.setStato(new PlayingState()); // Cambia stato a Play
+    }
+}
+
+class Lettore {
+    private Stato statoCorrente;
+
+    public Lettore() {
+        this.statoCorrente = new PausedState(); // Stato iniziale
+    }
+
+    public void setStato(Stato s) {
+        this.statoCorrente = s;
+    }
+
+    public void premiBottone() {
+        statoCorrente.clickPlay(this);
+    }
+}
+
+// utilizzo
+
+public class Main {
+    public static void main(String[] args) {
+        Lettore mp3 = new Lettore();
+
+        mp3.premiBottone(); // Output: Musica avviata!
+        mp3.premiBottone(); // Output: Musica in pausa...
+        mp3.premiBottone(); // Output: Musica avviata!
+    }
+}
+```
