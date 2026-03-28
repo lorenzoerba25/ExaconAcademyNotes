@@ -1317,3 +1317,151 @@ public class Main {
     }
 }
 ```
+Ultimo pacchetto che tratteremo si tratta dei patterns **structural** che si concentrano su come le classi e gli oggetti vengono composti per formare strutture più grandi e flessibili.
+- **Adapter pattern**: agisce come un traduttore (pensa alla presa elettrica italiana vs quella americana). Si usa quando hai una classe con un'interfaccia che non coincide con quella richiesta dal client.
+```java
+// Cosa abbiamo: Una presa italiana che eroga corrente
+interface PresaItaliana {
+    void erogaCorrenteTreBuchi();
+}
+
+// Cosa serve al nostro dispositivo: Una spina americana
+interface SpinaAmericana {
+    void riceveCorrenteDueLamelle();
+}
+
+class PresaMuroItaliana implements PresaItaliana {
+    public void erogaCorrenteTreBuchi() {
+        System.out.println("Erogazione corrente tramite 3 buchi (Standard IT).");
+    }
+}
+
+class AdattatoreDaItAdUs implements SpinaAmericana {
+    private PresaItaliana presaIt;
+
+    public AdattatoreDaItAdUs(PresaItaliana presa) {
+        this.presaIt = presa;
+    }
+
+    @Override
+    public void riceveCorrenteDueLamelle() {
+        // L'adattatore "converte" la chiamata
+        System.out.print("L'adattatore converte il segnale: ");
+        presaIt.erogaCorrenteTreBuchi();
+    }
+}
+
+//utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // 1. Abbiamo la presa italiana a muro
+        PresaItaliana muro = new PresaMuroItaliana();
+
+        // 2. Compriamo l'adattatore e ci colleghiamo la presa italiana
+        SpinaAmericana adattatore = new AdattatoreDaItAdUs(muro);
+
+        // 3. Il nostro dispositivo americano ora può funzionare!
+        System.out.println("Collegamento iPhone americano...");
+        adattatore.riceveCorrenteDueLamelle();
+    }
+}
+```
+- **Decorator pattern**: utilizzato quando vogliamo aggiungere nuovi strati di funzionalità alla nostra classe senza creare infinite sottoclassi. Un esempio lo abbiamo creando una classe base chiamata `Espresso` che è un normale caffè. Successivamente un decoratore astratto mantiene riferimento al caffè di base ma ogni decorazione aggiunge delle info in più all'oggetto base (stile Matrioska).
+```java
+// Interfaccia base
+interface Bevanda {
+    String getDescrizione();
+    double costo();
+}
+
+//componente concreto
+class Espresso implements Bevanda {
+    public String getDescrizione() { return "Espresso"; }
+    public double costo() { return 1.00; }
+}
+
+//decoratore astratto che all'interno contiene un riferimento all'oggetto da decorare
+abstract class CondimentoDecorator implements Bevanda {
+    protected Bevanda bevanda; // L'oggetto che stiamo "avvolgendo"
+
+    public CondimentoDecorator(Bevanda b) { this.bevanda = b; }
+}
+
+//decoratori concreti
+class Latte extends CondimentoDecorator {
+    public Latte(Bevanda b) { super(b); }
+
+    public String getDescrizione() { return bevanda.getDescrizione() + ", Latte"; }
+    public double costo() { return bevanda.costo() + 0.50; }
+}
+
+class Cacao extends CondimentoDecorator {
+    public Cacao(Bevanda b) { super(b); }
+
+    public String getDescrizione() { return bevanda.getDescrizione() + ", Cacao"; }
+    public double costo() { return bevanda.costo() + 0.20; }
+}
+
+//utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // Un semplice espresso
+        Bevanda mioCaffe = new Espresso();
+        
+        // Lo decoriamo con il latte
+        mioCaffe = new Latte(mioCaffe);
+        
+        // Lo decoriamo anche con il cacao
+        mioCaffe = new Cacao(mioCaffe);
+
+        System.out.println("Ordine: " + mioCaffe.getDescrizione());
+        System.out.println("Prezzo totale: €" + mioCaffe.costo());
+    }
+}
+```
+- **Facade pattern**: serve a nascondere una complessità mostruosa dietro un'interfaccia semplicissima (facciata). Supponiamo che in un sistema `Home Teather` ogni volta dobbiamo:
+  - Accendere le luci e abbassarle al 10%.
+  - Accendere il proiettore.
+  - Accendere l'amplificatore e impostare il volume.
+  - Accendere il lettore Blu-ray e premere "Play".
+```java
+class Luci { void off() {} void dim(int level) { System.out.println("Luci al " + level + "%"); } }
+class Proiettore { void on() {} void setInput() { System.out.println("Proiettore pronto."); } }
+class Amplificatore { void on() { System.out.println("Audio attivo."); } }
+class LettoreDvd { void play(String film) { System.out.println("Inizio film: " + film); } }
+
+class HomeTheaterFacade {
+    private Luci luci;
+    private Proiettore proiettore;
+    private Amplificatore amp;
+    private LettoreDvd dvd;
+
+    public HomeTheaterFacade(Luci l, Proiettore p, Amplificatore a, LettoreDvd d) {
+        this.luci = l;
+        this.proiettore = p;
+        this.amp = a;
+        this.dvd = d;
+    }
+
+    // Il metodo semplificato
+    public void guardaFilm(String titolo) {
+        System.out.println("Preparazione cinema in corso...");
+        luci.dim(10);
+        proiettore.on();
+        proiettore.setInput();
+        amp.on();
+        dvd.play(titolo);
+    }
+}
+
+// utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // Setup iniziale (lo fai una volta)
+        HomeTheaterFacade cinema = new HomeTheaterFacade(new Luci(), new Proiettore(), new Amplificatore(), new LettoreDvd());
+
+        // Con un solo comando fai tutto!
+        cinema.guardaFilm("Inception");
+    }
+}
+```
