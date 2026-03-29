@@ -89,9 +89,75 @@ Successivamente andiamo nella schermata *Advanced Settings* dove:
 - togliamo la spunta da *Throw an error if the file already exist*.
 
 
+Terminato tutto possiamo andare nella scheda Run e cliccare "Run" per eseguire il job.
 
+### <u> Ese 4 </u>
 
+**Utilizzando i metadati definiti nell'esercizio 1, leggere il file Employees.txt e generare in uscita un file csv con header per i soli record aventi hire_date precedente al 01/01/1990. Mostrare invece a video quelli aventi hire_date successiva (o uguale) al 01/01/1990.**
 
+Per la realizzazione di questo esercizio creeremo due versioni:
+1. con il componentet **FilterRow**
+2. con il componente **tMap**
+
+La **soluzione** con il componente **tFilterRow** richiede i seguenti componenti:
+- tFileInputDelimited
+- tFilterRow
+- tSortRow
+- tFileOutputDelimited
+- tLogRow
+Per prima cosa configuriamo il *tFileInputDelimited* come fatto negli esercizi precedenti. Successivamente configuriamo il *tFilterRow* inserendo una condizione nella tabella *Conditions* dove specifichiamo:
+- InputColumn = hire_date
+- Function = Empty
+- Operator = Lower than
+- Value = `TalendDate.parseDate("yy-MM-dd","90-01-01")`
+- Logical operator used to combine conditions: And (di fatto ignorato in questo caso perchè abbiamo solo una condizione, ma in caso di condizioni multiple verrebbero concatenate con un and logico)
+In questo modo configuriamo una condizione di filtro sulla colonna `hire_date` applicando l'operatore `lower than` della classe delle funzioni sulle stringhe/date e specifichiamo che dev'essere inferiore al 1/1/1990 nel formato specificato.
+
+Successivamente colleghiamo il *tFileInputDelimited* al *tFilterRow* che a sua volta avrà un collegamento di tipo *filter* al *tFileOutputDelimited* mentre con un collegamento di tipo *Reject* al *tSortRow*. In questo modo i record che soddisfano il predicato di filtro vengono inviati per la scrittura su file mentre quelli che non soddisfano il criterio di selezione vengono passati al sorter. 
+
+Il *tFileOutputDelimited* dev'essere configurato come nell'esercizio 3. Il *tSortRow* richiede di configurare il criterio ordinamento, che nel nostro caso è:
+- Schema column: `hire_date`
+- sort num or alpha? : date
+- order asc or desc? : asc
+In questo modo specifichiamo che vogliamo ordinare il campo `hire_date` di tipo `date` in modo crescente.
+
+Infine colleghiamo il `tSortRow` al `tLogRow` per poter stampare il contenuto ordinato a video.
+
+Terminato tutto possiamo andare nella scheda Run e cliccare "Run" per eseguire il job.
+
+La **soluzione** con il componente **tMap** è analoga alla precedente con un'unica differenza:
+- inseriamo un componente tMap al posto del tFilterRow che dev'essere eliminato.
+
+Il componente **tMap** è un componente polifunzionale perchè fornisce un numero elevato di settings per poter gestire/filtrare/modificare i flussi. Di fatti il tMap viene solitamente per prendere in input uno o più flussi, applicare logiche intermedie (join, filtraggio, mapping) e infine mappare gli input in uno o più flussi in output. Nel nostro caso il componente avrà un solo flusso in input ma due flussi in output (uno per i record che sono prima del 1 gennaio 1990 e uno per quelli dopo).
+
+Per questo motivo possiamo notare:
+- a sinistra abbiamo il flusso di input mentre sotto abbiamo il suo schema nello *schema editor*
+- nella sezione centrale possiamo specificare delle variabili che possono essere utilizzati come valore di un nuovo campo o come criterio di selezione
+- nella sezione di destra abbiamo i flussi di output e sotto i relativi schema.
+
+Procediamo a creare un flusso di output chiamato *filter_1*. Successivamente facciamo 'Ctrl + a' sui campi del flusso di input e li trasciniamo interamente su filter_1. In questo modo stiamo dicendo che preso il flusso in input quest'ultimo verrà replicato sul flusso in output. Riapplichiamo la stessa logica su un secondo flusso di output chiamato *reject_1*. Per il momento abbiamo due flussi che sono identici e non si distinguono in alcun modo.
+Ora dobbiamo far si che in *filter_1* vi siano i dati filtrati correttamente mentre in *reject_1* quelli che non passano la selezione.
+
+Quindi nella sezione centrale delle variabili creiamo una nuova variabile con:
+- Type = boolean
+- Variable = pre_1990
+- Expression = `TalendDate.compareDate(emp1.hire_date,TalendDate.parseDate("yyyy-MM-dd","1990-01-01")) == -1`
+Questo consente di creare una variabile chiamata *pre_1990* di tipo booleano e che viene calcolata tramite l'espressione indicata. Tale espressione effettua un confronto tra date, principalmente quella che viene dal flusso di input *emp1* che è *emp1.hire_date*, e la data ottenuta effettuando un parsing in formatto corretto del 1/1/1990. Il confronto restituisce:
+- 1 se la prima data è a posteriori della seconda
+- 0 se sono uguali
+- -1 se la prima è antecedente la seconda
+
+Infine dobbiamo comunicare in qualche modo che i record in *filter_1* devono essere mappati solo se *pre_1990* è true e analogamente per *reject_1* con valore false. Quindi sul flusso di output *filter_1* selezioniamo la freccia col segno "+", affianco alla chiave inglese, e inseriamo `Var.pre_1990`. In questo modo specifichiamo che i record devono essere mappati in questo output solo se la variabile *pre_1990* è true. Analogamente facciamo su *reject_1* ma indicando `!Var.pre_1990` (neghiamo l'esito). Dovremmo ottenere questa situazione:
+
+![alt text](img/image-22.png)
+
+Terminato tutto possiamo andare nella scheda Run e cliccare "Run" per eseguire il job.
+
+### <u> Ese 5 </u>
+
+### <u> Ese 6 </u>
+
+### <u> Ese 7 </u>
 
 ## Esercizi API
 
