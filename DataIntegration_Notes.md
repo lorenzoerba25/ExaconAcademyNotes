@@ -154,6 +154,78 @@ Infine dobbiamo comunicare in qualche modo che i record in *filter_1* devono ess
 Terminato tutto possiamo andare nella scheda Run e cliccare "Run" per eseguire il job.
 
 ### <u> Ese 5 </u>
+**Creare nel repository Talend i metadati relativi al file Jobs.txt, effettuare poi una lookup a partire dal contenuto del file Employees.txt sul contenuto del file Jobs.txt (dei soli record con min_lvl > 100). Creare quindi un file csv con header in output con i soli record che matchano, mentre per i record che non matchano fare una stampa a video.**
+
+Per realizzare questo job forniamo due versioni:
+- una prima versione con il componente *tJoin*
+- una seconda versione con il componente **tMap**
+
+Per la prima versione abbiamo bisogno di:
+- *tFileInputDelimited* x2
+- *tFilterRow* 
+- *tJoin*
+- *tFileOutputDelimited*
+- *tLogRow*
+
+Per prima cosa configuriamo i due *tFileInputDelimited* come precedentemente descritto, rispettivamente per leggere il file *Employees.txt* e *Jobs.txt*. Successivamente colleghiamo il componente che legge il file degli impiegati al *tJoin* e quello che legge il file dei lavori al *tFilterRow* e successivamente quest'ultimo al *tJoin*.
+
+Il *tFilterRow* (vedi lezione precedente) deve filtrare il campo `min_lvl` in modo tale che sia maggiore di 100, quindi:
+- InputColumn = `min_lvl`
+- Function = Empty
+- Operator = Greater than
+- Value = 100
+
+Successivamente configuriamo il *tJoin*, un componente che ci consente di applicare il predicato di join tra i due flussi in input. Solitamente il flusso master viene collegato con un collegamento *Main* mentre il secondo flusso prende il nome di *lookup* e ha un collegamento tratteggiato. L'operazione di lookup la eseguiamo quando vogliamo prendere una *master-table* e portarci delle informazioni aggiuntive provenienti da un'altra tabella. La configurazione del *tJoin* prevede di:
+- Configurare la tabella *Column Mapping*, che specifica quali dati vogliamo in output dalla tabella di lookup. Nel nostro caso mettiamo come *Lookup column*:
+  - *jobs_filtered.job_desc*
+  - *jobs_filtered.min_lvl*
+  - *jobs_filtered.max_lvl*
+- Configuriamo la tabella *Key Definition*, che specifica il predicato di join. In questo caso mettiamo:
+  - Input key attribute = job_id (campo della *master-table*)
+  - Lookup key attribute = jobs_filtered.job_id (campo della tabella di *lookup*)
+
+Infine spuntiamo la voce *Inner join ( with reject output)* che consente di eseguire una `INNER JOIN` abilitando un collegamento in output del *tJoin* dove vengono fatti convogliare gli scarti della join. 
+
+Ora colleghiamo con un  cavo *Main* il *tJoin* al *tFileOutputDelimited* (che dev'essere configurato per scrivere in output, come indicato nelle lezioni precedenti) e colleghiamo il *tJoin* al *tLogRow* con un collegamento *reject*.
+
+Terminate le configurazioni possiamo eseguire il job.
+
+La seconda versione è identica alla precedente ma prevede la presenza del *tMap* al posto del *tJojn* e l'eliminazione del *tFilterRow*. Come precedentemente indicato il *tMap* permette di applicare logiche di mapping su flussi in ingresso verso flussi in uscita. In questo caso possiamo applicare la logica di filtraggio sul flusso di *lookup* e applicare successivamente la join.
+
+Quindi il *tMap* prevede prima di tutto di specificare una condizione di filtro sul flusso di *lookup* in input (vedi lezione precedente). In questo caso non serve definire una variabile per filtrare i dati, agiamo direttamente sul campo. Selezioniamo la freccia col "+" a destra della chiave inglese e indichiamo `flusso_lookup.min_lvl > 100`. In questo modo diciamo che di questo flusso vogliamo solo i lavori con il livello minimo superiore a 100. Successivamente dobbiamo configurare l'opzione di join.
+
+Selezioniamo la chiave inglese, sempre sul secondo flusso, e si aprirà un menù di configurazione. In questo menu vediamo:
+- **Lookup Model**: possiamo specificare che cosa accade al flusso di lookup a ogni valutazione.
+  - **Load Once** (Carica una volta): è l'impostazione predefinita. I dati della tabella di lookup vengono caricati interamente in memoria all'inizio dell'esecuzione del componente. Questa modalità è la più veloce per tabelle di lookup di piccole o medie dimensioni.
+  - **Reload at each row** (Ricarica a ogni riga): per ogni riga del flusso principale, Talend esegue una nuova interrogazione sulla sorgente di lookup. È utile quando la tabella di lookup è troppo grande per la memoria o quando i dati cambiano frequentemente durante l'esecuzione del job.
+  - **Reload at each row** (cache): simile alla precedente, ma mantiene in memoria i risultati delle ricerche già effettuate per migliorare le prestazioni in caso di chiavi duplicate nel flusso principale.
+- **Match Model**: qui si decide quale record restituire in caso di corrispondenze multiple:
+  - **Unique match**: restituisce solo l'ultimo record trovato che corrisponde alla chiave (se ce ne sono diversi, sovrascrive i precedenti).
+  - **First match**: restituisce solo il primo record trovato che soddisfa la condizione di join.
+  - **All matches**: restituisce tutti i record che corrispondono alla chiave, creando un prodotto cartesiano parziale (moltiplica le righe in uscita).
+  - **All rows**: effettua una `CROSS JOIN` tra i due flussi quindi non permette di specificare il predicato di join
+- **Join Model**: permette di specificara la tipologia di join
+  - **Inner join**: eseguiamo la classica inner join sql
+  - **Left Outer join**: nel tMap l'unica outer join supportata è la left, quindi si tiene sempre come *master-table* la tabella del flusso di sinistra
+- **Store temp data**: serve a gestire i dati di lookup quando sono troppo grandi per essere contenuti interamente nella memoria RAM. Quando questa opzione è attivata, Talend non carica l'intero set di dati di lookup nella RAM, ma scrive i dati temporanei in una cartella locale sul disco.
+
+Nel nostro caso andiamo a indicare:
+- Lookup model = Load once
+- Match model = Unique match
+- Join model = Inner Join
+- Store temp data = false
+
+Nella parte inferiore, *Expr. key*, trasciniamo il campo `job_id` della master-table nella riga della colonna `job_id` della tabella di *lookup*. In questo modo indichiamo la chiave di join.
+
+Infine configuriamo due flussi di output, chiamati *match1* e *nomatch1*. Per il flusso di match copiamo tutti i campi, sia della master che della tabella di lookup. Per il flusso di nomatch, vogliamo inserire i dati che non soddisfano il predicato di join, e siccome comanda sempre la tabella di sinistra, otterremo gli scarti della join come "record della tabella di sinistra che non soddisfano il predicato di join", quindi possiamo copiare solo tutti i campi della tabella di sinistra. Inoltre dobbiamo dire al *tMap* di inserire in *nomatch1* i record che non passano la join, quindi selezioniamo la chiave inglese nel flusso *nomatch1* e qui abbiamo tre campi:
+- **Catch output reject**: restituisce tutti i record che non soddisfano i predicati di selezione (non di join). Raccoglie tutte le righe rifiutate dai filtri di selezione sulla tabella di output. Per esempio se un flusso in output ha la condizione `eta > 15`, un nuovo flusso con questa opzione attivata prende i record con `eta <= 15`.
+- **Catch lookup inner join reject**: restituisce tutti i record che non soddisfano il predicato di join. Poichè la master-table è quella di sinistra, otterremo sempre record della tabella di sinistra che non trovano match (di fatti ottengo l'esito di una `LEFT ANTI JOIN`).
+- **Schema Type**: specifichiamo lo schema delle colonne di output, che può essere *Built-in* o scelto dal *Repository*.
+
+Nel nostro caso mettiamo su `nomatch1`:
+- Catch output reject: false
+- Catch lookup inner join reject: true
+- Schema Type: Built-in
 
 ### <u> Ese 6 </u>
 
