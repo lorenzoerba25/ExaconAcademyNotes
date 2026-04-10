@@ -1106,13 +1106,583 @@ Prima di introdurre i vari *design pattern* più utilizzati, è importante sotto
 - **Open-Closed**. Le classi devono essere aperte alle estensioni (nuove funzionalità) ma chiuse alle modifiche. Si ottiene usando interfacce e polimorfismo invece di modificare il codice esistente.
 - **Liskov Substitution**. Una sottoclasse deve poter sostituire la sua classe base senza rompere il programma. Se `Quadrato` estende `Rettangolo` ma ne altera il comportamento logico, stai violando questo principio.
 - **Interface Segregation**. Un'interfaccia non dovrebbe costringere una classe a implementare metodi che non le servono. Meglio avere tante interfacce piccole che una interfaccia grande che contiene tutti i metodi.
-
-## Design pattern
-I design pattern in informatica rappresentano una collezione di soluzioni e stili adottabili per risolvere problemi ricorrenti e fornire una versione "standardizzata" ed efficiente del design di un componente (indipendentemente che sia una classe, un'architettura di rete o altri elementi in ambito IT).
-
-Prima di introdurre i vari *design pattern* più utilizzati, è importante sottolineare che indipendentemente dalla loro applicazione è consigliato adottare uno stile di programmazione che segua il principio **SOLID**:
-- **Single Responsibility**. Una classe deve avere un solo compito. Se una classe gestisce sia la gestione dei pagamenti che la comunicazione col database non va bene, meglio dividerla in due.
-- **Open-Closed**. Le classi devono essere aperte alle estensioni (nuove funzionalità) ma chiuse alle modifiche. Si ottiene usando interfacce e polimorfismo invece di modificare il codice esistente.
-- **Liskov Substitution**. Una sottoclasse deve poter sostituire la sua classe base senza rompere il programma. Se `Quadrato` estende `Rettangolo` ma ne altera il comportamento logico, stai violando questo principio.
-- **Interface Segregation**. Un'interfaccia non dovrebbe costringere una classe a implementare metodi che non le servono. Meglio avere tante interfacce piccole che una interfaccia grande che contiene tutti i metodi.
 - **Dependency Inversion**. Bisogna dipendere dalle astrazioni (interfacce), non dalle implementazioni concrete. Questo rende il codice facilmente testabile e modulare.
+
+Vediamo di seguito alcuni esempi di implementazione dei principi **SOLID**.
+
+**Open Closed** consente di realizzare classi aperte a estensioni ma chiuse a modifiche (non si cambia il codice pre-esistente).
+```java
+interface Sconto {
+    double calcola(double prezzo);
+}
+
+class ScontoNormale implements Sconto {
+    public double calcola(double prezzo) {
+        return prezzo;
+    }
+}
+
+class ScontoVIP implements Sconto {
+    public double calcola(double prezzo) {
+        return prezzo * 0.8;
+    }
+}
+
+// Utilizzo
+Sconto sconto = new ScontoVIP();
+double totale = sconto.calcola(100);
+
+// Se vogliamo aggiungere una nuova funzionalità basta fare
+
+class ScontoBlackFriday implements Sconto {
+    public double calcola(double prezzo) {
+        return prezzo * 0.5;
+    }
+}
+```
+
+**Liskov Substitution** prevede che le istanze di una classe figlia possono sostituire le istanze di una classe padre senza rompere il programma.
+```java
+public class Padre{
+    public void a() {}
+
+    public void b() {}
+
+    public void c() {}
+}
+
+
+public class Figlio extends Padre{
+    @Override
+    public void a() {
+        throw new UnsupportedOperationException("prova");
+    }
+
+    @Override
+    public void b() {
+        throw new UnsupportedOperationException("prova");
+    }
+}
+```
+In questo caso il figlio non può comportarsi come il padre perchè overrida i metodi ma fornisce un implementazione differente. Quindi una soluzione è applicare la chiamata `super.metodo()` nei metodi del figlio e in questo caso avremmo lo stesso comportamento, oppure se volessimo implementare delle funzionalità aggiuntive senza rompere LS potremmo far si che figlio e padre ereditano da una classe comune che fornisce il comportamento base:
+```java
+public class Comune {
+    public void a() {}
+    public void b() {}
+}
+
+public class Figlio extends Comune{
+    @Override
+    public void a() {
+        super.a();
+    }
+
+    @Override
+    public void b() {
+        super.b();
+    }
+}
+
+public class Padre extends Comune{
+    @Override
+    public void a() {}
+
+    @Override
+    public void b() {}
+
+    public void c() {}
+}
+```
+
+**Interface Segregation** ci consiglia di usare molteplici interfacce piccole piuttosto che una singola grande che obbliga le altre classi a implementare metodi che non le servono.
+```java
+
+```java
+
+//invece che usare 
+interface Stampante {
+    void stampaDocumento();
+    void scansionaDocumento();
+    void faxDocumento();
+}
+
+//meglio fare
+interface Stampante {
+    void stampaDocumento();
+}
+
+interface Scanner {
+    void scansionaDocumento();
+}
+
+interface Fax {
+    void faxDocumento();
+}
+```
+Infine abbiamo **Dependency Inversion** che ci consiglia di non scrivere codice che dipende direttamente dalle implementazioni concrete (classi che implementano una o piu interfacce) ma di scrivere codice che dipende dall'interfaccia così possiamo cambiare l'implementazione senza cambiare l'intero servizio.
+
+Nel nostro caso creiamo un'interfaccia `IDao` che viene implementata da due differenti classi, `TestDao` e `Dao`.
+Ora creando una classe `Servizio` con all'interno un oggetto di tipo `IDao` possiamo comodamente cambiare implementazione senza modificare `Servizio`.
+```java
+public interface IDao {
+    List<String> select();
+    Optional<String> selectOne();
+}
+
+@AllArgsConstructor
+public class Dao implements IDao {
+    private String con;
+    private String altro;
+
+    @Override
+    public List<String> select() {
+        System.out.println("faccio una query al db vero");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public Optional<String> selectOne() {
+        System.out.println("faccio una query al db vero");
+        return Optional.empty();
+    }
+}
+
+public class TestDao implements IDao {
+    @Override
+    public List<String> select() {
+        System.out.println("test finto");
+        return List.of();
+    }
+
+    @Override
+    public Optional<String> selectOne() {
+        System.out.println("test finto");
+        return Optional.empty();
+    }
+}
+
+public class Servizio {
+
+    private IDao dao;
+
+    public Servizio(IDao dao) {
+        this.dao = dao;
+    }
+
+    public List<String> getAll() {
+        return dao.select();
+    }
+
+    public Optional<String> getById(Long id) {
+        return dao.selectOne();
+    }
+}
+```
+
+Infine nel main possiamo fare:
+```java
+IDao daoVero = new Dao("conn", "altro");
+Servizio servizioReale = new Servizio(daoVero);
+
+IDao daoFinto = new TestDao();
+Servizio servizioTest = new Servizio(daoFinto);
+```
+
+Ora introduciamo alcuni design-patterns che non rientrano nei principi **SOLID** ma che semplificano la struttura del codice.
+
+Il primo pacchetto di design pattern che introduciamo sono i creational, utilizzati solitamente per dare un set di regole per la creazione di oggetti.
+- **Builder pattern**: consente di istanziare un oggetto senza passare dal costruttore parametrico, bensì crearlo aggiungendo un "mattone" alla volta, molto utile qual'ora vogliamo istanziare un oggetto senza specificare inizialmente tutti i campi. In questo esempio vediamo un esempio di implementazione del builder pattern (anche se solitamente si usano annotazioni come `@Builder` in Lombok):
+```java
+public class PersonaBuilder {
+    private static Persona p = null;
+
+    public PersonaBuilder() {
+        p = new Persona();
+    }
+
+    public PersonaBuilder name(String name) {
+        p.setName(name);
+        return this;
+    }
+
+    public PersonaBuilder surname(String surname) {
+        p.setName(surname);
+        return this;
+    }
+
+    public PersonaBuilder dob(LocalDate dob) {
+        p.setDataDiNascita(dob);
+        return this;
+    }
+
+    public PersonaBuilder codFisc(String codFisc) {
+        p.setCodiceFiscale(codFisc);
+        return this;
+    }
+
+    public Persona build() {
+        return p;
+    }
+}
+
+//utilizzo dove creo una persona solo con nome e codice fiscale
+PersonaBuilder pb = new PersonaBuilder()
+                .name("sempronio")
+                .codFisc("ashdfa")
+                .build();
+```
+- **Factory pattern**: consente di definire un'interfaccia per creare un oggetto, ma lascia che le sottoclassi decidano quale oggetto istanziare. In questo esempio vediamo che la classe `MazeGame` fornisce un costruttore che crea due room appoggiandosi al metodo interno `makeRoom`. Le classi che estendo `MazeGame` possono overridare il metodo `makeRoom` per creare un oggetto di tipo diverso:
+```java
+public class MazeGame {
+  public MazeGame() {
+     Room room1 = makeRoom();
+     Room room2 = makeRoom();
+     room1.connect(room2);
+     this.addRoom(room1);
+     this.addRoom(room2);
+  }
+
+  protected Room makeRoom() {
+     return new OrdinaryRoom();
+  }
+}
+public class MagicMazeGame extends MazeGame {
+  @Override
+  protected Room makeRoom() {
+      return new MagicRoom();
+  }
+}
+
+//Altra soluzione con la classe factory che in base a un certo parametro istanzia un certo tipo di oggetto
+```java
+public class ServiceFactory {
+    public static Service getService(Lang lang) {
+        return switch (lang) {
+            case ITA -> new ITService();
+            case ENG_UK -> new UKService();
+            case ENG_US -> new USService();
+        };
+    }
+
+    public enum Lang {
+        ITA,
+        ENG_UK,
+        ENG_US
+    }
+}
+```
+- **Prototype pattern**: permette di creare nuovi oggetti clonando un oggetto iniziale, detto appunto prototipo. Vediamo un esempio con l'utilizzo dell'interfaccia `Clonable`:
+```java
+// 1. Definiamo la classe che implementa Cloneable
+class Report implements Cloneable {
+    private String contenuto;
+    private String titolo;
+
+    public Report(String titolo) {
+        this.titolo = titolo;
+        // Simuliamo un'operazione pesante (es. fetch da DB)
+        this.contenuto = "Dati pesanti caricati..."; 
+    }
+
+    public void setContenuto(String contenuto) {
+        this.contenuto = contenuto;
+    }
+
+    public void stampa() {
+        System.out.println("Report: " + titolo + " | Contenuto: " + contenuto);
+    }
+
+    // 2. Sovrascriviamo il metodo clone()
+    @Override
+    public Report clone() {
+        try {
+            return (Report) super.clone();
+        } catch (CloneNotSupportedException e) {
+            return null;
+        }
+    }
+}
+
+// 3. Utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // Creiamo l'oggetto originale (operazione costosa)
+        Report originale = new Report("Mensile");
+        
+        // Creiamo una copia esatta senza rieseguire la logica del costruttore
+        Report copia = originale.clone();
+        copia.setContenuto("Dati aggiornati per la copia");
+
+        originale.stampa();
+        copia.stampa();
+    }
+}
+```
+- **Singleton pattern**: garantisce che una classe abbia una sola istanza in tutta l'esecuzione del programma e a fornire un unico punto di accesso globale a quell'istanza. Solitamente una classe che usa il pattern singleton fornisce;
+  - un attributo privato riferito all'oggetto da creare
+  - un costruttore privato utilizzato solo internamente per creare la prima volta l'istanza
+  - un metodo statico custom che invoca il costruttore privato la prima volta mentre le altre volte restituisce l'istanza creata la prima volta
+```java
+public class Persona {
+    private String name;
+    private String surname;
+
+    private static Persona p = null;
+
+    private Persona(String name, String surname) {
+        this.name = name;
+        this.surname = surname;
+    }
+
+    public static Persona getPersona(String name, String surname) {
+        if (p == null) {
+            p = new Persona(name, surname);
+        }
+        return p;
+    }
+}
+```
+
+Un altro pacchetto di design pattern che introduciamo è il behavioral pattern che descrivono come gli oggetti comunicano e si distribuiscono le responsabilità fra di loro.
+- **Strategy Pattern**: utilizzato per poter cambiare comodamente strategia di esecuzione senza dover modificare di volta in volta la classe.
+```java
+public interface NumberValidator {
+    boolean validate(int n);
+}
+
+public class EvenValidator implements NumberValidator{
+    @Override
+    public boolean validate(int n) {
+        return n % 2 == 0;
+    }
+}
+
+public class OddValidator implements NumberValidator{
+    @Override
+    public boolean validate(int n) {
+        return n % 2 != 0;
+    }
+}
+
+public class NumberService {
+    private List<NumberValidator> validators;
+
+    public NumberService(List<NumberValidator> validators) {
+        this.validators = validators;
+    }
+
+    public boolean validate(int n) {
+        for (NumberValidator validator : validators) {
+            if (!validator.validate(n)) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
+//utilizzo
+List<NumberValidator> validators = List.of(
+                new EvenValidator(),
+                new PositiveValidator()
+        );
+NumberService numberService = new NumberService(validators);
+```
+- **State pattern**: si usa quando un oggetto deve cambiare drasticamente il suo comportamento a seconda del suo stato interno. Sembra simile allo Strategy, ma qui gli stati spesso "conoscono" gli altri stati e sanno quando passare da uno all'altro.
+```java
+interface Stato {
+    void clickPlay(Lettore lettore);
+}
+
+// Stato: In Riproduzione
+class PlayingState implements Stato {
+    public void clickPlay(Lettore lettore) {
+        System.out.println("Musica in pausa...");
+        lettore.setStato(new PausedState()); // Cambia stato a Pausa
+    }
+}
+
+// Stato: In Pausa
+class PausedState implements Stato {
+    public void clickPlay(Lettore lettore) {
+        System.out.println("Musica avviata!");
+        lettore.setStato(new PlayingState()); // Cambia stato a Play
+    }
+}
+
+class Lettore {
+    private Stato statoCorrente;
+
+    public Lettore() {
+        this.statoCorrente = new PausedState(); // Stato iniziale
+    }
+
+    public void setStato(Stato s) {
+        this.statoCorrente = s;
+    }
+
+    public void premiBottone() {
+        statoCorrente.clickPlay(this);
+    }
+}
+
+// utilizzo
+
+public class Main {
+    public static void main(String[] args) {
+        Lettore mp3 = new Lettore();
+
+        mp3.premiBottone(); // Output: Musica avviata!
+        mp3.premiBottone(); // Output: Musica in pausa...
+        mp3.premiBottone(); // Output: Musica avviata!
+    }
+}
+```
+Ultimo pacchetto che tratteremo si tratta dei patterns **structural** che si concentrano su come le classi e gli oggetti vengono composti per formare strutture più grandi e flessibili.
+- **Adapter pattern**: agisce come un traduttore (pensa alla presa elettrica italiana vs quella americana). Si usa quando hai una classe con un'interfaccia che non coincide con quella richiesta dal client.
+```java
+// Cosa abbiamo: Una presa italiana che eroga corrente
+interface PresaItaliana {
+    void erogaCorrenteTreBuchi();
+}
+
+// Cosa serve al nostro dispositivo: Una spina americana
+interface SpinaAmericana {
+    void riceveCorrenteDueLamelle();
+}
+
+class PresaMuroItaliana implements PresaItaliana {
+    public void erogaCorrenteTreBuchi() {
+        System.out.println("Erogazione corrente tramite 3 buchi (Standard IT).");
+    }
+}
+
+class AdattatoreDaItAdUs implements SpinaAmericana {
+    private PresaItaliana presaIt;
+
+    public AdattatoreDaItAdUs(PresaItaliana presa) {
+        this.presaIt = presa;
+    }
+
+    @Override
+    public void riceveCorrenteDueLamelle() {
+        // L'adattatore "converte" la chiamata
+        System.out.print("L'adattatore converte il segnale: ");
+        presaIt.erogaCorrenteTreBuchi();
+    }
+}
+
+//utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // 1. Abbiamo la presa italiana a muro
+        PresaItaliana muro = new PresaMuroItaliana();
+
+        // 2. Compriamo l'adattatore e ci colleghiamo la presa italiana
+        SpinaAmericana adattatore = new AdattatoreDaItAdUs(muro);
+
+        // 3. Il nostro dispositivo americano ora può funzionare!
+        System.out.println("Collegamento iPhone americano...");
+        adattatore.riceveCorrenteDueLamelle();
+    }
+}
+```
+- **Decorator pattern**: utilizzato quando vogliamo aggiungere nuovi strati di funzionalità alla nostra classe senza creare infinite sottoclassi. Un esempio lo abbiamo creando una classe base chiamata `Espresso` che è un normale caffè. Successivamente un decoratore astratto mantiene riferimento al caffè di base ma ogni decorazione aggiunge delle info in più all'oggetto base (stile Matrioska).
+```java
+// Interfaccia base
+interface Bevanda {
+    String getDescrizione();
+    double costo();
+}
+
+//componente concreto
+class Espresso implements Bevanda {
+    public String getDescrizione() { return "Espresso"; }
+    public double costo() { return 1.00; }
+}
+
+//decoratore astratto che all'interno contiene un riferimento all'oggetto da decorare
+abstract class CondimentoDecorator implements Bevanda {
+    protected Bevanda bevanda; // L'oggetto che stiamo "avvolgendo"
+
+    public CondimentoDecorator(Bevanda b) { this.bevanda = b; }
+}
+
+//decoratori concreti
+class Latte extends CondimentoDecorator {
+    public Latte(Bevanda b) { super(b); }
+
+    public String getDescrizione() { return bevanda.getDescrizione() + ", Latte"; }
+    public double costo() { return bevanda.costo() + 0.50; }
+}
+
+class Cacao extends CondimentoDecorator {
+    public Cacao(Bevanda b) { super(b); }
+
+    public String getDescrizione() { return bevanda.getDescrizione() + ", Cacao"; }
+    public double costo() { return bevanda.costo() + 0.20; }
+}
+
+//utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // Un semplice espresso
+        Bevanda mioCaffe = new Espresso();
+        
+        // Lo decoriamo con il latte
+        mioCaffe = new Latte(mioCaffe);
+        
+        // Lo decoriamo anche con il cacao
+        mioCaffe = new Cacao(mioCaffe);
+
+        System.out.println("Ordine: " + mioCaffe.getDescrizione());
+        System.out.println("Prezzo totale: €" + mioCaffe.costo());
+    }
+}
+```
+- **Facade pattern**: serve a nascondere una complessità mostruosa dietro un'interfaccia semplicissima (facciata). Supponiamo che in un sistema `Home Teather` ogni volta dobbiamo:
+  - Accendere le luci e abbassarle al 10%.
+  - Accendere il proiettore.
+  - Accendere l'amplificatore e impostare il volume.
+  - Accendere il lettore Blu-ray e premere "Play".
+```java
+class Luci { void off() {} void dim(int level) { System.out.println("Luci al " + level + "%"); } }
+class Proiettore { void on() {} void setInput() { System.out.println("Proiettore pronto."); } }
+class Amplificatore { void on() { System.out.println("Audio attivo."); } }
+class LettoreDvd { void play(String film) { System.out.println("Inizio film: " + film); } }
+
+class HomeTheaterFacade {
+    private Luci luci;
+    private Proiettore proiettore;
+    private Amplificatore amp;
+    private LettoreDvd dvd;
+
+    public HomeTheaterFacade(Luci l, Proiettore p, Amplificatore a, LettoreDvd d) {
+        this.luci = l;
+        this.proiettore = p;
+        this.amp = a;
+        this.dvd = d;
+    }
+
+    // Il metodo semplificato
+    public void guardaFilm(String titolo) {
+        System.out.println("Preparazione cinema in corso...");
+        luci.dim(10);
+        proiettore.on();
+        proiettore.setInput();
+        amp.on();
+        dvd.play(titolo);
+    }
+}
+
+// utilizzo
+public class Main {
+    public static void main(String[] args) {
+        // Setup iniziale (lo fai una volta)
+        HomeTheaterFacade cinema = new HomeTheaterFacade(new Luci(), new Proiettore(), new Amplificatore(), new LettoreDvd());
+
+        // Con un solo comando fai tutto!
+        cinema.guardaFilm("Inception");
+    }
+}
+```
