@@ -103,6 +103,157 @@ Integer x = null;
 System.out.println(x + 3);
 ```
 
+### Ereditarietà
+In Java il concetto di ereditarietà è un aspetto molto importante e che fornisce numerosi strumenti per rendere il codice più pulito ed efficiente.
+Ipotizziamo di avere una classe `Vec2` che rappresenta un vettore bidimensionale, quindi con i campi `x,y`, e una classe `Vec3` che è un vettore tridimensionale, quindi con i campi `x,y,z`. Invece che creare due classi totalmente indipendenti e distaccate, noi possiamo trattare un `Vec3` come se fosse un `Vec2` con l'aggiunta di un campo in più, il campo `z`.
+In questo caso possiamo usare la *keyword* `extends` per comunicare al compilatore che `Vec3` eredita il comportamento di `Vec2`. Importante sottolineare che quando si parla di ereditarietà, in Java non è supportata l'ereditarietà multipla e che inoltre il comportamento ereditato fa riferimento a membri e metodi definiti come `public` o `protected` (quanto dichiarato come `private` rimane oscurato nella classe che eredita). 
+
+Ora `Vec2` prende il nome di classe **Padre** e `Vec3` come classe **Figlio**. In Java le relazioni sono di tipo **is-a** quindi possiamo affermare che un figlio è anche un padre (eredita da lui) ma non viceversa.
+
+```java
+
+
+public class Padre {
+
+    publlic String dad = "Papà";
+    protected int car = 10;
+    private int cash = 1000;
+}
+
+public class Figlio extends Padre {
+
+    publlic String son = "Figlio";
+}
+
+```
+
+In questo caso la classe `Figlio`, oltre all'attributo `son` possiede:
+- attributo `dad` in quanto publico ed ereditato
+- attributo `car` in quanto protetto ed ereditato
+
+ma non possiederà `cash` in quanto privato e disponibile sono all'interno della classe in cui è dichiarato.
+
+Nel caso dei vettori possiamo definirli come:
+```java
+public class Vec2 {
+    protected int x;
+    protected int y;
+
+    public Vec2(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+}
+
+public class Vec3 extends Vec2 {
+    private int z;
+
+    public Vec3(int x, int y, int z) {
+        super(x, y);
+        this.z = z;
+    }
+}
+```
+
+Possiamo quindi notare che Vec3 eredita i campi di Vec2 e per istanziare un oggetto di classe `Vec3` non riscrive il codice del costruttore da zero (corretto ma ridondante):
+```java
+public Vec3(int x, int y, int z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+```
+
+bensì tramite il costrutto `super` (che significa "fai rimento al metodo della superclasse", altro modo per chiamare la classe padre) richiama il costruttore della classe padre che si occupa di inizializzare i campi `x,y` e infine aggiunge un nuovo comportamento localmente, l'inizializzazione di `z`.
+
+Ora possiamo istanziare gli oggetti a nostro piacimento, ricordando sempre la relazione `is-a`:
+```java
+Vec3 v1 = new Vec3(1, 2, 3);
+Vec2 v2 = new Vec2(3, 4);
+Vec2 v3 = new Vec3(5, 4, 3);
+//Vec3 v4 = new Vec2(1, 2); //NON VA :(
+Vec3 v4 = new Vec3(1, 2, 3);
+```
+
+In Java si parla di tipo **statico** e tipo **dinamico**. Il tipo statico è il tipo di una variabile considerato all'atto della compilazione e coincide con il tipo che è specificato nell'argomento di sinistra dell'istruzione di assegnazione, mentre il tipo dinamico è quello considerato all'atto dell'esecuzione, da parte della JVM, e coincide con l'argomento di destra.
+
+Nel nostro caso:
+- `v1` è di tipo statico `Vec3` e dinamico `Vec3`
+- `v2` è di tipo statico `Vec2` e dinamico `Vec2`
+- `v3` è di tipo statico `Vec2` e dinamico `Vec3`
+- `v4` è di tipo statico `Vec3` e dinamico `Vec3`
+
+Quindi all'atto della scrittura del codice, quando scriviamo `v1.` saranno disponibili tutti i metodi della classe definita come tipo statico, quindi `Vec3`, analogamente accade per `v4`. Se facciamo `v2.` oppure `v3.` i metodi disponibili saranno quelli di `Vec2` perchè il compilatore ignora il tipo dinamico e controlla solo il tipo statico. 
+
+Ecco il flusso completo:
+- durante la compilazione il compilatore guarda il tipo statico della variaibile, cerca un metodo a partire da quella classe e se lo trova lo memorizza e procede con le prossime istruzioni (se non lo trova non compila)
+- successivamente in esecuzione la JVM guarda il tipo dinamico e cerca a partire da quella classe il metodo che aveva trovato il compilatore al passo precedente. 
+  - Se lo trova allora viene scelto per essere eseguito, altrimenti se non lo trova
+  - viene risalità la gerarchia di ereditarietà (e attenzione, a questo punto la JVM il metodo lo troverà sempre, perchè se il compilatore l'ha trovato è perchè o tipo statico e dinamico coincidono oppure il tipo statico è una superclasse del tipo dinamico, e risalendo lo troverà)
+- Una volta trovato viene eseguito il metodo
+
+Per questo motivo non possiamo dire che `Figlio f = new Padre()` perchè in fase di compilazione `f.` restituisce tutti i membri della classe `Figlio` (anche quelli non ereditati da padre ma semplicemente aggiunti dal figlio). Se scegliessimo un membro presente in figlio ma non in padre, la JVM (che vedrebbe `f` come un `Padre`) cercherebbe a partire da `Padre` il campo specificato e non lo troverebbe, quindi il compilatore ci ferma prima di ciò, dicendoci "un padre non è necessariamente un figlio, non puoi definirlo tale".
+
+Di fatti `Vec3 v4 = new Vec2(1, 2);` non compila perchè stiamo dicendo "vec2 è anche un vec3" cosa che non è affatto vera. Come consiglio possiamo vederla come "il tipo statico non può aggiungere funzionalità in più del tipo dinamico. Le aspettative non possono superare la realtà". Infatti le aspettative sono un `Vec3` ma in realtà ricevo un `Vec2`.
+
+Vediamo ora degli esempi sul polimorfismo, supponendo che `Vec2` abbiamo questo metodo:
+```java
+public class Vec2 {
+    public Vec2 add(Vec2 other) {
+        return new Vec2(
+                this.x + other.x,
+                this.y + other.y
+        );
+    }
+}
+
+```
+
+e `Vec3` questo:
+```java
+public class Vec3 extends Vec2{
+    public Vec3 add(Vec3 other) {
+        return new Vec3(
+                this.x + other.x,
+                this.y + other.y,
+                this.z + other.z
+        );
+    }
+}
+```
+
+Notiamo che `Vec3::add` non definisce un `@Override` sul metodo di `Vec2` ma sono bensì due metodi distinti.
+Ora vediamo cosa accade eseguendo:
+- `System.out.println(v1.add(v2));` stampa `Vec2{x=4, y=6}` perchè `v1` è sia statico che dinamico `Vec3`, il compilatore cerca un metodo in `Vec3` che si chiama `add` e che riceve come oggetto `v2` che è un `Vec2` statico. Questo metodo non è presente in `Vec3` ma in `Vec2` da cui eredita, quindi è disponibile e verrà utilizzato quel tipo di `add` (che restituirà per tanto un `Vec2`)
+- `System.out.println(v2.add(v3));` stampa `Vec2{x=8, y=8}` perchè `v2` è sia statico che dinamico `Vec2`, il compilatore cerca un metodo in `Vec2` che si chiama `add` e che accetta un oggetto `v3` che è un `Vec2` statico, lo trova perchè è proprio presente in `Vec2` e lo eseguirà.
+- `System.out.println(v1.add(v3));` stampa `Vec2{x=6, y=6}` perchè `v1` è sia statico che dinamico `Vec3`, il compilatore cerca un metodo in `Vec3` che si chiama `add` e che riceve come oggetto `v3` che è un `Vec2` statico. Questo metodo non è presente in `Vec3` ma in `Vec2` da cui eredita, quindi è disponibile e verrà utilizzato quel tipo di `add` (che restituirà per tanto un `Vec2`)
+- `System.out.println(v1.add(v4));` stampa `Vec3{z=6, x=2, y=4}` perchè `v1` è sia statico che dinamico `Vec3`, il compilatore cerca un metodo in `Vec3` che si chiama `add` e che riceve come oggetto `v4` che è un `Vec3` statico. Questo metodo è presente e definito in `Vec3` quindi verrà utilizzato.
+
+L'unico modo in questo caso, di utilizzare `add` di `Vec3` è che entrambi i vettori da sommare siano `Vec3` statici.
+
+Nel caso in cui invece il metodo di `Vec2` fosse stato definito in `Vec3` come un override (devono avere però la stessa firma, ergo stesso parametro dello stesso tipo, da errore se usiamo come parametro una sotto classe. Per intenderci se in `Vec2` facciamo `add(Vec2 v)` e in `Vec3` facciamo `add(Vec3 v)` non stiamo overridandao, siamo nella situazione di prima, due metodi distinti) allora le cose cambiano leggermeente. Ipottiziamo ora di avere in `Vec2` un metodo `stampaTipo` e lo stesso metodo in `Vec3` che ovviamente deve essere overridato.
+```java
+public class Vec2 {
+    public void stampaTipo() {
+        System.out.println("Vec2");
+    }
+}
+
+@Override
+public class Vec3 extends Vec2 {
+    public void stampaTipo() {
+        System.out.println("Vec3");
+    }
+}
+
+```
+
+In questo caso:
+- `v1.stampaTipo();` stampa `Vec3` perchè `v1` è staticamente un `Vec3` quindi il compilatore cerca il metodo in `Vec3` e lo trova salvandosi la sua firma. Dinamicamente `v1` è un `Vec3` quindi la JVM cerca quella firma a partire da `Vec3`, la trova e la esegue.
+- `v2.stampaTipo();` stampa `Vec2` perchè `v2`è staticamente un `Vec2` quindi il compilatore cerca il metodo in `Vec2` e lo trova salvandosi la sua firma. Dinamicamente `v2` è un `Vec2` quindi la JVM cerca quella firma a partire da `Vec2`, la trova e la esegue.
+- `v3.stampaTipo();` stampa `Vec3` perchè `v3` è staticamente un `Vec2` quindi il compilatore cerca il metodo in `Vec2` e lo trova salvandosi la sua firma. Dinamicamente `v3` è un `Vec3` quindi la JVM cerca quella firma a partire da `Vec3`, la trova e la esegue.
+- `v3.stampaTipo();` stampa `Vec` perchè `v4` è staticamente un `Vec3` quindi il compilatore cerca il metodo in `Vec3` e lo trova salvandosi la sua firma. Dinamicamente `v4` è un `Vec3` quindi la JVM cerca quella firma a partire da `Vec3`, la trova e la esegue.
+
 ### Interfacce e classi astratte
 
 Una classe definita come `abstract` permette di definire una classe non istanziabile, solitamente con un comportamento base, e che deve avere almeno un metodo astratto ma può avere anche metodi definiti. Inoltre una classe astratta può possedere delle variabili d'istanza. Cosa importante, si può estendere una sola classe astratta tramite `extends`. Se omesso i metodi sono `private`.
@@ -120,6 +271,76 @@ Come detto le interfacce possono avere metodi definiti, ma possono essere di tip
         return false;
     }
 ``` 
+
+Nel caso di ereditarità con classi astratte, le classi concrete (coloro che estendono una classe astratta) devono fornire un implementazione propria dei metodi definiti come astratti. 
+```java
+public abstract class Animale {
+    private String specie;
+    private String razza;
+
+    public abstract void verso();
+
+    public void respira() {
+        System.out.println("sto respirando");
+    }
+}
+
+public class Cane extends Animale{
+    public String altroAttributoPerCani;
+
+    @Override
+    public void verso() {
+        System.out.println("bau");
+    }
+}
+
+public class Gatto extends Animale{
+    public String altroAttributoPerGatti;
+
+    @Override
+    public void verso() {
+        System.out.println("Miao");
+    }
+
+    public void faiLeFusa() {
+        System.out.println("purrrpurrr");
+    }
+}
+```
+
+In questo modo nel *main* possiamo definire un oggetto con un tipo statico che è:
+- la classe astratta e in questo caso disponiamo dei metodi/membri che sono comuni alle classe che vi ereditano
+- la classe concreta e in questo caso disponiamo dei metodi/membri che sono sia comuni che specifici di quella classe.
+
+```java
+Gatto a1 = new Gatto();
+a1.faiLeFusa(); //purrrpurrr
+a1.verso(); //miao
+a1.respira(); //sto respirando
+
+Animale a2 = new Cane();
+a2.verso(); //bau
+a2.altroAttributoPerCani; //NON è accessibile, a2 è di tipo statico Animale errore in compilazione
+
+a2 = new Gatto();
+a2.verso(); //miao
+a2.altroAttributoPerGatti; //NON è accessibile, a2 è di tipo statico Animale errore in compilazione
+
+```
+
+Il vantaggio, che vedremo poi in seguito con le strutture dati, è che posso dichiarare un array di oggetti concreti di tipo statico astratto, analogamente per le interfacce.
+
+```java
+
+Animale[] animali = { new Gatto(), new Cane(), new Gatto()};
+
+for (Animale animale : animali) {
+            // l'unico metodo che ho è verso e respira perché sono gli unici dichiarati nella classe astratta Animale
+            animale.verso();
+            animale.respira();
+        }
+
+```
 ### Strutture dati
 Vediamo una carrellata veloce di strutture dati.
 
