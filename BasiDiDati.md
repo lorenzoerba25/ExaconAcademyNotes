@@ -1416,3 +1416,70 @@ from marche natural join modelli
 group by marche.cod_casa
 having count(modelli.tipo) filter (where modelli.tipo = 'SPORT') > 2
 ``` 
+
+### Transazioni
+Indipendentemetne dal DBMS che andiamo a utilizzare (PostgreSQL, OracleDB, MySQL, etc...) l'obbiettivo primario è sempre quello di garantire una serie di proprietà durante l'esecuzione di query sul database. In particolare queste proprietà prendono il nome di **ACID(e)** dall'acronimo:
+- **Atomicità**
+- **Consistenza**
+- **Isolamento**
+- **Durabilità** o persistenza.
+
+Queste proprietà vengono garantite quando eseguiamo una **transazione**, ovvero un'unità logica di lavoro, non ulteriormente scomponibile, compostàda una sequenza di operazioni (istruzioni SQL) di modifica dei dati. Quindi una transazione rappresenta un blocco di istruzioni, per esempio una transazione è l'insieme di operazioni da eseguire quando si effettua un bonifico bancario. Questa transazione si compone di:
+- controllo del saldo mittente
+- prelievo del saldo mittente
+- versamento saldo destinatario
+  
+La proprietà dell'**atomicità** garantisce che ogni transazione eseguita sul database viene vista come un'operazione atomica, non scomponibile in sotto-operazioni ma come un unico blocco di esecuzione. Per esempio se una query deve togliere 100 euro al saldo di un utente e allo stesso tempo caricare 100 euro sul saldo di un altro utente, quest'ultime due vengono viste e interpretate come un unica operazione. Il vantaggio è immediato, io non posso posizionarmi in mezzo a queste due operazioni ed eseguire altre modifiche. Potrò farlo solo una volta che la transazione considerata "atomica" si conclude.
+
+La proprietà della **consistenza** garantisce che ogni volta che una transazione si conclude, il database si ritrova in uno stato consistente (tutti i vincoli sono rispettati e i dati rispettano le regole sintattiche e semantiche stabilite dalle relazioni). Analogamente garantisce che nel caso di un errore durante l'esecuzione di una transazione il database venga ripristinanto all'ultimo stato consistente conosciuto. Il vantaggio è che in qualsisasi caso la base di dati si trova sempre in uno stato consistente, sia che la transazione sia andata a buon fine sia che la transazione abbia avuto qualche errore. Pensando al caso del bonifico, nel caso positivo il database transita in uno stato dove il mittente ha 100 euro in più e il destinatario ha 100 euro in meno, nel caso negativo non avremmo mai che il mittente ha 100 euro in meno ma il destinatario non riceve il versamento, bensì ripristiniamo all'ultimo stato consistente (mittente coi suoi 100 euro e il destinatario senza versamento).
+
+La proprietà dell'**isolamento** garantisce che durante l'esecuzione di una transazione nessun'altra transazione può interfrerire con la sua esecuzione. In altre parole l'esito di una transazione non deve essere influenzato dall'esecuzione contemporanea di altre transazioni. Quindi una transazione non può leggere gli stati intermedi di un'altra transazione. Per esempio se una transazione leggesse i risultati intermedi di un'altra transazione che successivamente eseguirebbe un *rollback* (ripristino dell'ultimo stato consistente), avremmo dei problemi in termini di esito dell'esecuzione. Nel nostro esempio, se una transazione esegue operazioni sulla tabella dei saldi allora la transazione acquisisce un *lock* su quella tabella e qualsiasi altra transazione che vuole eseguire un'operazione sulla tabella dei saldi non potrà farlo in quanto il *lock* è stato già acquisito e si potrà continuare solo una volta che il *lock* verrà rilasciato.
+
+La proprietà della **durabilità** o persistenza, garantisce che i risultati di una transazione che non ha fatto *rollback* vengano serializzati nella base di dati e quindi resi permanenti. In particolare prima della serializzazione le operazioni eseguite vengono salvate nel *transaction log*, un log di transazioni che tiene traccia di tutte le operazioni fatte. Il vantaggio è che in caso di malfunzionamenti durante la serializzazione, il sistema di *recovery* del database procede a controllare il log e ripristinare lo stato coerente.
+
+Una transazione inizia sempre con un'istruzione di `START TRANSACTION` e termina con un'istruzione di fine transazione:
+- `COMMIT`: salviamo le modifiche effettuate dalla transazione e chiude la transazione
+- `ROLLBACK`: annulliamo quanto fatto nella transazione e ripristina l'ultimo stato consistente.
+
+La maggior parte dei DBMS solitamente viene configurato di default con un impostazione di **commit automatico**, ovvero ogni operazione che eseguiamo sul database viene racchiusa tra uno *start transaction* e un *commit* se l'operazione va bene, altrimenti *rollback*. Noi non dobbiamo specificare nulla prima di un'operazione e la serializzazione viene fatta in automatico.
+
+È possibile però specificare che vogliamo usare una configurazione di **commit manuale**, quindi dobbiamo noi lanciare l'istruzione di inizio transazione e fine transazione. Quindi il DBMS tratterà come transazione tutto quello che viene eseguito dopo il momento in cui lanciamo *start transaction* e prima di *commit/rollback*. Importante notare inoltre che la maggior parte dei client DB (DBeaver o altri) lanciano un comando di *start transaction* alla prima operazione di modifica dati anche se noi non lo abbiamo specificato (ma dobbiamo lanciare infine un *commit/rollback*)
+
+Solitamente si può modificare il fatto che l'esecuzione di uno script sia in commit manuale o automatico ma a volte può risultare più comodo avere una connessione che sia in transazione manuale/automatica senza doverla modificare di volta in volta.
+Solitamente in sviluppo conviene usare una connessione *dev* per lo sviluppo, dove teniamo il commit automatico, e una connessione *prod* per quando lasciamo il sw in produzione e dove quindi il commit è manuale (oltre ad altri flag come conferma di modifica dati o connessione *select-only*).
+
+Importante notare che in molti DBMS il concetto di **isolamento** differisce in modo sostanziale. La maggior parte dei DBMS garantisce isolamento a livello di tabella, quindi due transazioni concorrenti (lanciate contemporaneamente oppure una dopo l'altra) non possano lavorare contemporaneamente alla stessa tabella. Altri DBMS permettono di specificare isolamento a livello di record, quindi due transazioni concorrenti non possono lavorare sullo stesso record della stessa tabella ma su record differenti si.
+
+Vediamo i comandi delle transazioni in PostgreSQL.
+Il comando `START TRANSACTION` viene identificato tramite `begin` mentre `commit` e `rollback` rimangono invariati.
+Quindi ogni volta che in commit manuale lanciamo `begin`, stiamo facendo partire una transazione e tutto quello che viene eseguito da quel momento fino a quando si esegue `commit` o `rollback` viene trattato come una transazione. N.B le istruzioni di `begin`,`commit`,`rollback` non sono placeholder, non dobbiamo necessariamente racchiudere tutto tra queste istruzioni perchè SQL tiene traccia del riferimento temporale di quando è stato lanciato il comando. Quindi se lancio `begin` alle ore 10:00 e dopo qualche minuto eseguo una `UPDATE SET WHERE` che risulta sopra l'istruzione di begin, noi stiamo eseguendo comunque dentro la transazione. Questo avviene perchè stiamo eseguendo pezzi di istruzioni dal nostro script, ad esempio:
+```sql
+UPDATE utente
+SET nome = 'Lorenzo'
+WHERE matricola = 1234
+
+begin;
+
+SELECT * FROM utente
+
+UPDATE utente
+SET eta = 22
+WHERE nome = 'Lorenzo`
+
+commit;
+```
+In questo caso se eseguiamo prima `begin` e poi `UPDATE` sopra, stiamo eseguendo dentro la transazione appena lanciata. Poi eseguendo la `SELECT` e la seconda `UPDATE` siamo sempre nella transazione creata e infine facciamo `commit`. Se eseguissimo invece lo script intero in manuale, allora prima della `UPDATE` del nome il client aprirebbe una transazione (esecuzione implicita di `begin`), eseguirebbe la prima update, ignorerebbe il secondo `begin` (nella maggior parte dei database moderni non si possono aprire due transazioni nella stessa sessione, dove per sessione intendiamo solitamente ogni scheda/tab SQL) perchè abbiamo già una transazione aperta e farebbe la select e update e committerebbe.
+
+Inoltre, per quanto riguarda Postgres, le istruzioni di `SELECT` non vengono tracciate nel *transaction log* e allo stesso tempo non acquisiscono un lock di tabella. In altre parole se abbiamo due transazioni concorrenti, la prima lanciata che contiene una select e una seconda che contiene una update, la seconda può essere lanciata e non darà problemi anche se la prima transazione è aperta. Il viceversa invece, ovviamente, non vale.
+
+Quindi abbiamo due effett, il primo:
+- transazione 1 che esegue una update
+- transazione 2 che successivamente esegue una select
+- la transazione 2 viene eseugita ma vede uno stato "precedente" alla update perchè la transazione 1 non si è conclusa
+il secondo:
+- transazione 1 che esegue una update
+- transazione 2 che esegue una update
+- la transazione 2 rimane pending e non esegue fino a quando la transazione 1 che ha il lock sulla stessa tabella non rilascia il lock
+
+Inoltre alcune operazioni in alcuni DBMS sono *rollbackabili*. Infatti in Postgres possiamo fare una *truncate*/*delete* dove possiamo fare una rollback e tornare indietro mentre in *OracleDB* la *delete* è auto-committante. Il vantaggio di OracleDB è che la delete è molto performante, non devo salvarmi lo stato intermedio per eventuali rollback però non posso tornare indietro.
+
