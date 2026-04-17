@@ -1438,7 +1438,7 @@ La proprietà dell'**isolamento** garantisce che durante l'esecuzione di una tra
 La proprietà della **durabilità** o persistenza, garantisce che i risultati di una transazione che non ha fatto *rollback* vengano serializzati nella base di dati e quindi resi permanenti. In particolare prima della serializzazione le operazioni eseguite vengono salvate nel *transaction log*, un log di transazioni che tiene traccia di tutte le operazioni fatte. Il vantaggio è che in caso di malfunzionamenti durante la serializzazione, il sistema di *recovery* del database procede a controllare il log e ripristinare lo stato coerente.
 
 Una transazione inizia sempre con un'istruzione di `START TRANSACTION` e termina con un'istruzione di fine transazione:
-- `COMMIT`: salviamo le modifiche effettuate dalla transazione e chiude la transazione
+- `COMMIT`: salviamo le modifiche effettuate dalla transazione e chiude la transazione (ma se la transazione ha errori, viene lanciato comunque rollback sotto al cofano)
 - `ROLLBACK`: annulliamo quanto fatto nella transazione e ripristina l'ultimo stato consistente.
 
 La maggior parte dei DBMS solitamente viene configurato di default con un impostazione di **commit automatico**, ovvero ogni operazione che eseguiamo sul database viene racchiusa tra uno *start transaction* e un *commit* se l'operazione va bene, altrimenti *rollback*. Noi non dobbiamo specificare nulla prima di un'operazione e la serializzazione viene fatta in automatico.
@@ -1470,7 +1470,7 @@ commit;
 ```
 In questo caso se eseguiamo prima `begin` e poi `UPDATE` sopra, stiamo eseguendo dentro la transazione appena lanciata. Poi eseguendo la `SELECT` e la seconda `UPDATE` siamo sempre nella transazione creata e infine facciamo `commit`. Se eseguissimo invece lo script intero in manuale, allora prima della `UPDATE` del nome il client aprirebbe una transazione (esecuzione implicita di `begin`), eseguirebbe la prima update, ignorerebbe il secondo `begin` (nella maggior parte dei database moderni non si possono aprire due transazioni nella stessa sessione, dove per sessione intendiamo solitamente ogni scheda/tab SQL) perchè abbiamo già una transazione aperta e farebbe la select e update e committerebbe.
 
-Inoltre, per quanto riguarda Postgres, le istruzioni di `SELECT` non vengono tracciate nel *transaction log* e allo stesso tempo non acquisiscono un lock di tabella. In altre parole se abbiamo due transazioni concorrenti, la prima lanciata che contiene una select e una seconda che contiene una update, la seconda può essere lanciata e non darà problemi anche se la prima transazione è aperta. Il viceversa invece, ovviamente, non vale.
+Inoltre, per quanto riguarda Postgre, le istruzioni di `SELECT` non vengono tracciate nel *transaction log* e allo stesso tempo non acquisiscono un lock di tabella. In altre parole se abbiamo due transazioni concorrenti, la prima lanciata che contiene una select e una seconda che contiene una update, la seconda può essere lanciata e non darà problemi anche se la prima transazione è aperta. Il viceversa invece, ovviamente, non vale.
 
 Quindi abbiamo due effett, il primo:
 - transazione 1 che esegue una update
@@ -1481,5 +1481,6 @@ il secondo:
 - transazione 2 che esegue una update
 - la transazione 2 rimane pending e non esegue fino a quando la transazione 1 che ha il lock sulla stessa tabella non rilascia il lock
 
-Inoltre alcune operazioni in alcuni DBMS sono *rollbackabili*. Infatti in Postgres possiamo fare una *truncate*/*delete* dove possiamo fare una rollback e tornare indietro mentre in *OracleDB* la *delete* è auto-committante. Il vantaggio di OracleDB è che la delete è molto performante, non devo salvarmi lo stato intermedio per eventuali rollback però non posso tornare indietro.
+Inoltre alcune operazioni in alcuni DBMS sono *rollbackabili*. Infatti in Postgre possiamo fare una *truncate*/*delete* dove possiamo fare una rollback e tornare indietro mentre in *OracleDB* la *delete* è auto-committante. Il vantaggio di OracleDB è che la delete è molto performante, non devo salvarmi lo stato intermedio per eventuali rollback però non posso tornare indietro.
 
+Inoltre possiamo notare che quando eseguiamo delle operazioni in Postgre in una transazione e quest'ultima da un errore, quella transazione va in *abort* e lui ci consente di fare altre operazioni (ma inutilmente, perchè una transazione abort non verrà mai committata). Inoltre alcuni client dopo una rollback ci restituiscono implicitamente una nuova transazione, lanciano un begin di nascosto, perchè non possiamo avere istruzioni che non sono in transazioni. Analogamente avviene in Talend dopo l'esecuzione di un tDbRollback.
