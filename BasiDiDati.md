@@ -655,6 +655,15 @@ SELECT f1.
 FROM Film f1 JOIN Film f2 ON f1.regista=f2.regista AND f1.titolo <> f2.titolo
 ```
 
+Analogamente è possibile utilizzare la `JOIN USING`, la quale prevede di applicare una `JOIN ON` nel caso in cui le tabelle condividono lo stesso campo su cui fare la join. Ad esempio:
+```sql
+SELECT *
+FROM employees e JOIN jobs j USING (jobs_id)
+```
+prevede che entrambe le tabelle abbiano un campo chiamato `jobs_id` su cui computare la join. Dato che il campod di join è univoco per entrambi, quello che accade è che abbiamo in output una sola colonna del predicato di join.
+
+Lo svantaggio di questa tecnica è che non possiamo inserire ulteriori condizioni come predicato e oltretutto non possiamo applicare operatori come `>,<, <>` ma solo *equi-join*.
+
 Vediamo ora altre tipologie di JOIN.
 Un esempio di JOIN che abbiamo già visto è la `CROSS JOIN` che computa il prodotto cartesiano e per cui non è richiesto un predicato (equivale a fare `FROM r1,r2`).
 
@@ -1417,7 +1426,7 @@ group by marche.cod_casa
 having count(modelli.tipo) filter (where modelli.tipo = 'SPORT') > 2
 ``` 
 
-### Transazioni
+## Transazioni
 Indipendentemetne dal DBMS che andiamo a utilizzare (PostgreSQL, OracleDB, MySQL, etc...) l'obbiettivo primario è sempre quello di garantire una serie di proprietà durante l'esecuzione di query sul database. In particolare queste proprietà prendono il nome di **ACID(e)** dall'acronimo:
 - **Atomicità**
 - **Consistenza**
@@ -1484,3 +1493,112 @@ il secondo:
 Inoltre alcune operazioni in alcuni DBMS sono *rollbackabili*. Infatti in Postgre possiamo fare una *truncate*/*delete* dove possiamo fare una rollback e tornare indietro mentre in *OracleDB* la *delete* è auto-committante. Il vantaggio di OracleDB è che la delete è molto performante, non devo salvarmi lo stato intermedio per eventuali rollback però non posso tornare indietro.
 
 Inoltre possiamo notare che quando eseguiamo delle operazioni in Postgre in una transazione e quest'ultima da un errore, quella transazione va in *abort* e lui ci consente di fare altre operazioni (ma inutilmente, perchè una transazione abort non verrà mai committata). Inoltre alcuni client dopo una rollback ci restituiscono implicitamente una nuova transazione, lanciano un begin di nascosto, perchè non possiamo avere istruzioni che non sono in transazioni. Analogamente avviene in Talend dopo l'esecuzione di un tDbRollback.
+
+## Viste
+Una vista è un oggetto di un database che consente di associare un'etichetta (un nome) a una query. Quindi noi possiamo richiamare quel nome (etichetta) come se fosse una tabella del database e in questo modo, eseguendo la query che richiama la vista, andiamo ad eseguire la query sottostante la vista. Di fatti la vista viene definita come **tabella virtuale**, in quanto non serializzata/materializzata, ma mostrata virtualmente all'atto della sua invocazione.
+
+Le viste ci tornano comode quando dobbiamo implementare una logica, anche complessa, e vogliamo associarle un'etichetta e infine interroghiamo quella etichetta senza ripetere molte volte la logica complessa. 
+
+Dal lato perfomance/trade-off abbiamo che quando eseguiamo una query sul db, noi interroghiamo una tabella presente nel database, materializzata, prelevando i vari dati. Quando invece interroghiamo una vista, quei dati non sono presenti nel database, bensì bisogna generare il dato eseguendo la query associata alla vista e riprocessarlo nella query più esterna. Quindi computazionalmente l'interrogazione di una vista è molto più pesante di interrogare una tabella materializzata nel db.
+
+Un esempio di utilizzo delle viste è proprio la **segregazione dei dati**. Ovvero se supponiamo di avere due utenze differenti, con diversi permessi e necessità, non ha senso che io espongo tutti i dati a tutte le utenze. Mi conviene rendere i dati accessibili e visualizzabili solo alle utenze dedicate e nel modo specifico. Ad esempio amministrazione può vedere tutte le informazioni di una tabella sulle fatture mentre il team di analisti può solo vedere un subset di quegli attributi.
+
+Il comando per definire una vista è `CREATE VIEW <nome vista> AS (sq)` dove:
+- `<nome vista>` è il nome/etichetta della vista
+- `sq` è la query SQL associata
+
+Esempio:
+
+```sql
+
+CREATE VIEW emp_jobs AS
+SELECT *
+FROM employees e JOIN jobs j ON e.job_id = j.job_id
+```
+
+Così come creiamo una tabella, noi non possiamo avere campi duplicati con lo stesso nome (in questo caso evitiamo questo problema grazie all'uso della join using). Inoltre non abbiamo fornito alias per i campi prelevati dalla query e per tale motivo vengono riportati con lo stesso nome con il quale vengono prelevati.
+Per definire degli alias in una vista abbiamo due strade:
+1. definire un alias nella query associata della vista
+2. definire i nomi dei campi nella definzione della view (`CREATE VIEW <nome view> (campo1,campo2,...,campo3) AS`). In questo caso dobbiamo prestare attenzione alla notazione posizionale, in quanto *campo1* viene associato al primo campo estratto dalla query
+
+Su Postgre inoltre abbiamo anche il costrutto `OR REPLACE` che ci consente di cambiare la query definizione della vista senza effettuare il *drop* e ridefinirla. Quindi tutto il resto rimane invariato (permessi di esecuzione di quella vista, etc...). Importante che noi andiamo a mantenere invariato il tracciato della vista, ovvero possiamo aggiungere un predicato di selezione o aggiungere una nuova colonna, ma non possiamo:
+- modificare il *datatype* dei campi, il loro ordine o il nome
+- eliminare colonne esistenti
+Se dobbiamo eseguire una di queste operazioni dobbiamo prima lanciare `DROP VIEW` e poi `CREATE VIEW`
+
+Ad esempio:
+```sql
+CREATE VIEW OR REPLACE emp_jobs AS
+SELECT *, e.job_Id as job_id2
+FROM employees e JOIN jobs j ON e.job_id = j.job_id
+WHERE e.salary > 100
+```
+modifica la vista andando a prendere solo i dipendenti che hanno salario maggiore di 100 e aggiungiamo un campo chiamato *job_id2*
+
+Ora possiamo utilizzare quella vista per effettuare delle interrogazioni vere e prioprio, ad esempio:
+
+```sql
+SELECT *
+FROM emp_jobs
+```
+
+L'errore che ci da l'`OR REPLACE` è quando facciamo:
+```sql
+CREATE VIEW OR REPLACE emp_jobs AS
+SELECT *
+FROM employees e JOIN jobs j ON e.job_id = j.job_id
+WHERE e.salary > 100
+```
+in quanto stiamo ridefinendo la vista rimuovendo dei campi.
+
+Ora introduciamo due varianti di viste:
+- viste aggiornabili (*updatable*)
+- viste materializzate
+
+Il primo tipo di vista consentono di eseguire operazioni *DML* sulla tabella restituita dall'esecuzione della query associata alla vista. Quindi possiamo eseguire operazioni di `INSERT, UPDATE, DELETE` richiamando la vista. Questo può avvenire solo se:
+- la query della vista non deve contenere delle join (quindi deve avere una sola tabella)
+- la query non deve avere costrutti come `GROUP BY, HAVING, LIMIT`, funzioni di aggregazione, window functions
+- la query non deve avere colonne virtuali, cioè definite tramite espressione (ad esempio `SELECT (dataRestituzione - DataNoleggio) as giorni`)
+- le colonne non restituite dalla query sono colonne *nullable* o per cui è specificato un valore di default
+
+Quindi immaginiamo di avere:
+```sql
+CREATE VIEW emp_view AS
+SELECT *
+FROM employees
+```
+
+Io posso fare:
+```sql
+DELETE FROM emp_view WHERE employee_id > 100
+```
+
+Importante notare che fino ad ora noi possiamo eseguire operazioni *DML* sulla vista senza controlli. Immaginiamo di avere:
+```sql
+CREATE VIEW emp_view AS
+SELECT *
+FROM employees
+WHERE employee_id > 200
+```
+Per com'è definita la vista io posso inserire un record che non vedrei nella vista (un impiegato con id <= 200) oppure trasformare/aggiornare un record in modo tale che io non lo veda tramite la vista (prendo un dipendente con id 210 e lo modifico a 110). Questo tipo di operazioni sono molto pericolose e si possono risolvere con la clausola `WITH CHECK OPTION` inserito alla fine della vista. Se presente questa clausola stiamo indicando che le operazioni *DML* su quella vista possono essere eseguite solo se stanno nel perimetro della vista (*tracciato* aka schema, *perimetro* aka dati presenti). Quindi se facciamo:
+```sql
+CREATE VIEW OR REPLACE emp_view AS
+SELECT *
+FROM employees
+WHERE employee_id > 200
+WITH CHECK OPTION;
+```
+le operazioni di *DML* verranno eseguite solo se (oltre alle condizioni di prima) il vincolo specificato nella `WHERE` è soddisfatto.
+
+Si hanno due tipi di `CHECK OPTION`:
+- `LOCAL CHECK OPTION` che è quello di default assegnato col check option, se non specificato, che prevede di controllare i vincoli definiti nella vista locale/attuale. Nel caso in cui utilizziamo altre viste, allora abbiamo due strade, se proviamo ad esempio a inserire un dato nella nostra vista:
+  - se l'altra vista ha un vincolo check option, allora anche il suo vincolo dev'essere rispettato
+  - se non ha un vincolo basta che sia rispettato il nostro vincolo local.
+
+- `CASCADE CHECK OPTION` verifica che i dati rispettino il `WHERE` della vista attuale e anche tutti i `WHERE` di tutte le viste sottostanti utilizzate nella clausola `FROM` (utilizzato in gerarchie di viste). Quindi se noi utilizziamo altre viste nella `FROM` e possediamo il `CASCADE CHECK OPTION` significa che dobbiamo rispettare anche i loro vincoli (indipendentemente se quest'ultimi sono definiti tramite check option oppure no).
+
+Quindi possiamo riassumere che:
+- se eseguiamo un *DML* su una vista con `CASCADE CHECK OPTION`, lei controlla il vincolo locale e quello di tutte le viste utilizzate nella gerarchia, indipendentemente se usano check option o no
+- se eseguiamo un *DML* su una vista con `LOCAL CHECK OPTION`, lei controlla il vincolo locale e valuta anche quello delle viste nella gerarchia solo se lo hanno esplicitamente indicato tramite check option, altrimenti si ferma a valutare sé stessa.
+
+Importante notare che i vincoli check option li valutiamo a partire dalla vista su cui eseguiamo il *DML*. Quindi `LOCAL/CASCADE` fanno la differenza solo sulla vista su cui tentiamo il *DML*, per le altre nella gerarchia, che sia `LOCAL/CASCADE`, poco importa, ci interessa solo se hanno il vincolo
