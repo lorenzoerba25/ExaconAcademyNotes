@@ -473,3 +473,30 @@ In questa variante proponiamo una soluzione identica alla precedente ma con una 
 
 ### Soluzione con campo tecnico in sorgente (ts_sorgente) e campo chiave noto
 In questa soluzione aggiungiamo un'informazione all'esempio precedente, ovvero conosciamo la chiave dei record in sorgente. Questa informazione può sembrare poco rilevante ma in realtà fornisce un grande aiuto. Infatti precedentemente gli aggiornamenti (`UPDATE`) venivano trattati come semplici inserimenti (`INSERT`). Questo perchè non conoscendo la chiave dei record impostavamo tutti i campi a formare un'unica chiave primaria e di conseguenza in presenza di un record mutato, quest'ultimo appariva come uno nuovo (chiave non presente), e procedevamo a inserirlo (rimuovendo il vecchio in una seconda fase). Conoscendo invece il campo chiavo, gli aggiornamenti vengono trattati come veri e propri aggiornamenti, in quanto il *tDbOutput* prova a fare una insert con la chiave specificata e se questo fallisce esegue un update (trattandosi di uno o qualche campo chiave, ma non tutti, se quel record esiste allora verrà aggiornato) e non dovremo fare una delete. Per quanto riguarda il processo di delete l'unico cambiamento riguarda solamente il numero di campi che leggiamo da *target* e *sorgente*, ovvero non leggiamo più tutti i campi ma bensì solo i campi chiave, quelli su cui computiamo la left anti join.
+
+
+## Slowly Changing Dimension (SCD)
+L'SCD è un concetto fondamentale nel data warehousing che descrive come gestire i cambiamenti dei dati descrittivi (le "dimensioni") nel tempo. 
+
+Possono essere di diverso tipo, sei, ma noi ne vedremo 4:
+- tipo 0: ignora gli attributi/cambiamenti
+- tipo 1: tipo di SCD che sovrascrive i dati precedenti con le variazioni (non teniamo traccia delle variazioni ma solo delle nuove versioni)
+- tipo 2 (le più usate): mantengono storicità di tutte le variazioni sui vari record, quindi si crea un nuovo record che è la nuova versione ma viene mantenuto il precedente
+- tipo 3 (simile alla tipo 2): non si tiene traccia di tutte le variazioni dei record ma solo record versione attuale e precedente. In questo caso non si tiene traccia di variazione a livello di record ma solo di colonna. Quindi la differenza è che nel tipo 3 aggiungo un campo per quella colonna, come *colonna_attuale*, *colonna_vecchia*.
+
+
+A livello teorico potremmo avere un SCD per ogni campo ma questo potrebbe complicare le cose. Immaginiamo una tabella anagrafica utente. Potrebbe tornare comodo avere una SCD tipo 1 sul campo *nome* e tipo 2 sul campo *indirizzo*, ma questo causerebbe difficoltà di gestione perchè non manteniamo storicità su nome ma per via di indirizzo si.
+
+Vediamo ora un esempi di implementazione di SCD di tipo 2 attraverso dei campi tecnici:
+- `STARTDATE`: è il momento in cui il record inizia ad avere validità (momento in cui nasce il record)
+- `ENDDATE`: momento in cui il record cessa di avere validità (per i record attivi, ossia quelli presenti al momento corrente nella tabella SORGENTE, il campo sarà valorizzato con una data fittizia (*dummy*)/con null poichè questi record non hanno una data di fine validità)
+- `ACTUAL TAG`: campo utilizzato per discriminare un record attivo da uno inattivo (i record con `actual_tag=0` sono quelli contenenti lo storico delle variazioni dei record nella tabella sorgente mentre i record con `actual_tag=1` sono quelli presenti al momento corrente nella tabella sorgente). Solitamente un booleano o un intero.
+
+Immaginiamo ora di avere **sorgente**:
+| Campo1 | Campo2 | Campo3 |
+| ------ | ------ | ------ |
+| A      | B      | C      |
+| D      | E      | F      |
+| G      | H      | I      |
+
+e **target inizialmente vuota**.
