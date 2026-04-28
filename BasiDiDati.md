@@ -1586,7 +1586,7 @@ CREATE VIEW OR REPLACE emp_view AS
 SELECT *
 FROM employees
 WHERE employee_id > 200
-WITH CHECK OPTION;
+WITH LOCAL CHECK OPTION;
 ```
 le operazioni di *DML* verranno eseguite solo se (oltre alle condizioni di prima) il vincolo specificato nella `WHERE` è soddisfatto.
 
@@ -1595,10 +1595,10 @@ Si hanno due tipi di `CHECK OPTION`:
   - se l'altra vista ha un vincolo check option, allora anche il suo vincolo dev'essere rispettato
   - se non ha un vincolo basta che sia rispettato il nostro vincolo local.
 
-- `CASCADE CHECK OPTION` verifica che i dati rispettino il `WHERE` della vista attuale e anche tutti i `WHERE` di tutte le viste sottostanti utilizzate nella clausola `FROM` (utilizzato in gerarchie di viste). Quindi se noi utilizziamo altre viste nella `FROM` e possediamo il `CASCADE CHECK OPTION` significa che dobbiamo rispettare anche i loro vincoli (indipendentemente se quest'ultimi sono definiti tramite check option oppure no).
+- `CASCADED CHECK OPTION` verifica che i dati rispettino il `WHERE` della vista attuale e anche tutti i `WHERE` di tutte le viste sottostanti utilizzate nella clausola `FROM` (utilizzato in gerarchie di viste). Quindi se noi utilizziamo altre viste nella `FROM` e possediamo il `CASCADED CHECK OPTION` significa che dobbiamo rispettare anche i loro vincoli (indipendentemente se quest'ultimi sono definiti tramite check option oppure no).
 
 Quindi possiamo riassumere che:
-- se eseguiamo un *DML* su una vista con `CASCADE CHECK OPTION`, lei controlla il vincolo locale e quello di tutte le viste utilizzate nella gerarchia, indipendentemente se usano check option o no
+- se eseguiamo un *DML* su una vista con `CASCADED CHECK OPTION`, lei controlla il vincolo locale e quello di tutte le viste utilizzate nella gerarchia, indipendentemente se usano check option o no
 - se eseguiamo un *DML* su una vista con `LOCAL CHECK OPTION`, lei controlla il vincolo locale e valuta anche quello delle viste nella gerarchia solo se lo hanno esplicitamente indicato tramite check option, altrimenti si ferma a valutare sé stessa.
 
-Importante notare che i vincoli check option li valutiamo a partire dalla vista su cui eseguiamo il *DML*. Quindi `LOCAL/CASCADE` fanno la differenza solo sulla vista su cui tentiamo il *DML*, per le altre nella gerarchia, che sia `LOCAL/CASCADE`, poco importa, ci interessa solo se hanno il vincolo
+Importante notare che i vincoli check option li valutiamo a partire dalla vista su cui eseguiamo il *DML*. Quindi `LOCAL/CASCADED` fanno la differenza solo sulla vista su cui tentiamo il *DML*, per le altre nella gerarchia, che sia `LOCAL/CASCADED`, poco importa, ci interessa solo se hanno il vincolo
