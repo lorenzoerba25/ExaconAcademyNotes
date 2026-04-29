@@ -1602,3 +1602,14 @@ Quindi possiamo riassumere che:
 - se eseguiamo un *DML* su una vista con `LOCAL CHECK OPTION`, lei controlla il vincolo locale e valuta anche quello delle viste nella gerarchia solo se lo hanno esplicitamente indicato tramite check option, altrimenti si ferma a valutare sé stessa.
 
 Importante notare che i vincoli check option li valutiamo a partire dalla vista su cui eseguiamo il *DML*. Quindi `LOCAL/CASCADED` fanno la differenza solo sulla vista su cui tentiamo il *DML*, per le altre nella gerarchia, che sia `LOCAL/CASCADED`, poco importa, ci interessa solo se hanno il vincolo
+
+Le viste **materializzate** invece consentono di memorizzare, serializzare, l'esecuzione della vista direttamente in una tabella del database. Il vantaggio immediato è in termini di performance perchè quei dati sono subito disponibili nel database e non deve essere rieseguita ogni volta. Una vista materializzata viene definita tramite il comando:
+```sql
+CREATE MATERIALIZED VIEW <nome_view> AS (sq)
+```
+
+Con le viste materializzate c'è necessità che ogni tanto quella query definita nella vista debba essere rieseguita per poter aggiornare la tabella serializzata.
+
+Questo avviene tramite il comando `REFRESH MATERIALIZED VIEW <nome_vista>`.
+
+Una specifica importante di Postgre è la *keyword* `CONCURRENTLY`. Questa opzione specificata all'atto della definzione del *refresh* della vista ci permette di definire che quella vista in caso di refresh mantiene i dati vecchi disponibili e visionabili fino a quando l'operazione di refresh non termina. Appena termina l'operazione di *refresh* i dati vecchi spariscono e vengono sovrascritti da quelli nuovi.
