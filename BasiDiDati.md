@@ -1613,3 +1613,174 @@ Con le viste materializzate c'è necessità che ogni tanto quella query definita
 Questo avviene tramite il comando `REFRESH MATERIALIZED VIEW <nome_vista>`.
 
 Una specifica importante di Postgre è la *keyword* `CONCURRENTLY`. Questa opzione specificata all'atto della definzione del *refresh* della vista ci permette di definire che quella vista in caso di refresh mantiene i dati vecchi disponibili e visionabili fino a quando l'operazione di refresh non termina. Appena termina l'operazione di *refresh* i dati vecchi spariscono e vengono sovrascritti da quelli nuovi.
+
+## Window function
+Una window function é una funzione che ci permette di effettuare dei calcoli aggregati su record che in qualche modo sono legati al record corrente. Fino ad'ora eseguivamo funzioni aggregate facendo "aggregazioni" sull'intera tabella (tramite `GROUP BY`) e di conseguenza passiamo da una certa cardinalità in input a una cardinalità differente in output, cambia la granularità.
+
+Con le window function manteniamo la stessa cardinalità, quindi calcoliamo gli aggregati ma a partire dal record corrente e mantenendo la granularità.
+Sintassi:
+```sql
+SELECT window_function ([argomenti]) over ([partition by colonne] [order by colonne]) 
+```
+
+La clausola `over` contraddistingue una window function e determina come i record vengono passati alla funzione, puö contenere al suo interno i seguenti componenti:
+- `Partition by`: si occupa di raggruppare i record in partizioni (gruppi su cui poi verrà calcolata la window function)
+- `Order by`: si occupa di specificare l'ordine con cui i record saranno passati alla window function
+
+**NOTA**: le due componenti sopra citate sono opzionali, quindi possono essere omesse: in caso di
+omissione della partition by ci sarà un'unica partizione per tutti i record in input, in caso di omissione
+della order by l'ordine con cui i record in input verranno passati alla window function sarà randomico.
+
+Ad esempio:
+```sql
+SELECT emp_id, nome, cognome, avg(salary) over (partition by job_id)
+FROM employees
+```
+consente di prendere l'intera tabella employees e per ogni record affiancare la media dei salari di tutti i dipendenti che hanno lo stesso *job_id*. Fino a poco fa avremmo avuto solamente la media dei salari per job_id ma non potevamo portare in `SELECT` altri campi che non fossero quelli indicati nella clausola di `GROUP BY`.
+
+
+Ad esempio:
+```sql
+SELECT emp_id, nome, cognome, avg(salary) over (partition by job_id order by )
+FROM employees
+```
+
+Le window function possono essere utilizzate soltanto nelle clausole `SELECT` e `ORDER BY` in quanto sono valutate successivamente alle funzioni di aggregazione.
+**NOTA BENE**: se ci dovesse essere la necessitå di filtrare in base al
+valore assunto da una window function, non potendole utilizzare
+nella clausola where, si pub utilizzare Una outer query che filtra
+SUI valore della window function calcolato nella subquery.
+
+
+Le window function che possiamo utilizzare sono quelle derivanti dalle funzioni aggregate, applicate tramite clausola `over`:
+- max
+- min
+- sum
+- avg
+- count
+
+oppure le window function 'pure':
+- row_number()
+- rank()
+- dense rank()
+- percent rank()
+- cume_dist()
+- ntile(n)
+- lag(value [, offset, default])
+- lead(value [, offset, default])
+- first value(value)
+- last value(value)
+- nth
+
+La window function `row_number` permette di produrre un numero progressivo (a partire da 1) per i vari record all'interno della partizione.
+- Non necessita parametri in input
+- se non specifichiamo la clausola `order by` l'ordinamento prodotto sarà randomico (a ogni esecuzione un esito diverso)
+```sql
+SELECT employee_id, job_id, row_number() over (partition by job_id)
+FROM employees
+```
+![alt text](image-8.png)
+
+La window function `rank` permette di produrre il 'rango' del record corrente (con gap), ovvero il row_number del primo record nel gruppo di peers a cui appartiene il record corrente.
+- **rank necessita di ordinamento**, perché per produrre il progressivo utilizza appunto l'ordinamento specificato nella clausola order by
+- I peers avranno appunto lo stesso valore progressivo, il record successivo ai peers
+avrà un progressivo che prevede un gap rispetto al progressivo precedente (il gap
+sarà pari al numero di peers)
+
+```sql
+SELECT employee_id, job_id, rank() over (partition by job_id order by first_name desc)
+FROM employees
+```
+![alt text](image-9.png)
+
+La window function 'dense_rank'
+
+
+La window function `percent_rank` rende il rank del reocrd corrente in percentuale, calcolato utilizzando questa formula $\frac{rank - 1}{numeroRighePartizione -1}$. 
+- Il primo record della partizione (e i suoi peers) hanno sempre rank=1 quindi percent_rank = 0
+
+```sql
+
+```
+![alt text](image-10.png)
+
+La window function `cume_dist` restituisce la distribuzione cumulativa (ovvero la frazione di valori minori o uguali rispetto al valore corrente all'interno della partizione). Il valore della window function è calcolato valutando questa formula: $\frac{a}{a}$
+
+```sql
+
+```
+![alt text](image-11.png)
+
+La window function `ntile(n)` resttuisce, dato in input un valore intero, di suddividere i record ordinati all'interno di una partizione in quel numero di gruppi in uscita, facendo in modo di mantenere gruppi dello stesso numero di record.
+- i gruppi prendono il nome di *bucket*
+- i valori assunti dalla window function sono compresi tra 1 e N: il primo bucket ha numero 1, i successivi saranno 2 ecc, fino ad arrivare al valore specificato come parametro della funzione
+
+```sql
+SELECT job_id,employee_id, first_name
+FROM ntile(3) over ()
+```
+
+![alt text](image-12.png)
+
+
+La funzione `lag(value,[offset,default])` e `lead(value,[offset,default])` richiedono 3 parametri:
+- `value` (obbligatorio): rappresenta il valore osservato dalla funzione (può essere un'espressione)
+- `offset` (opzionale, di base a 1): il numero di record precedenti su cui valutare la `value`
+- `default` (opzionale, di base a NULL): se non esiste il record all'indietro restituisce come valore della lag il valore associato come parametro di default (che dev'essere dello stesso datatype di `value`)
+
+Ovviamente guardando indietro il `default` trova utilizzo sui primi record, che non hanno antecedenti.
+```sql
+select employee_id, first_name, job_.id, lag(employee_id) over (partition by job_id)
+from employees
+```
+
+![alt text](image-13.png)
+
+
+Vediamo un altro esempio sulla lag:
+
+```sql
+select employee_id, first name, job_.id, lag(employee_id,2,-1) over (partition by job_id)
+from employees
+```
+
+![alt text](image-14.png)
+
+La funzione `lead` al contrario, lag guarda indietro, guarda in avanti. Quindi cerca il `value` su `offset` record successivi. Se non lo trova usa il valore di `default`.
+
+Ovviamente guardando avanti il `default` trova utilizzo sugli ultimi record, che non hanno successivi.
+
+
+La funzione `first_value(value)` assume il valore `value` valutato sul primo record della partizione a cui appartiene il record corrente.
+
+```sql
+
+```
+
+Analogamente `last_value(value)` assume il valore `value` valutato sull'ultimo record della partizione a cui appartieene il record corrente. Nel caso di first_value che ci sia o meno order by non cambia perchè il primo record è uguale per tutti i frame, ma nel caso di last_value l'ultimo record cambia a ogni frame perchè viene popolato. Quindi in linea di massima possiamo dire che la last_value con order by restituisce sempre o il record corrente o un suo peer.
+
+La funzione `nth_value(value, nth)` restituisce il valore `value` valutato sull `nth`-esimo record del frame del record corrente.
+- Se nth-esimo record nella partizione non esiste,
+la funzione assumerà il valore NULL; qui non c'è la
+possibilità di fornire come parametro un valore di
+default, per realizzare questo tipo di logica
+possiamo applicare la funzione coalesce al
+risultato della window function.
+- Se nella clausola over non specifichiamo order by
+nth-esimo record sarà selezionato utilizzando un
+ordine randomico
+- Anche con questa window function vale il discorso
+dell'ordinamento e del window frame, ovvero se
+è specificato un ordinamento e il record é
+progressivamente minore rispetto al valore
+specificato come nth, allora il risultato della
+window function sarà null (perché il window frame
+non comprende l'nth-esimo record della
+partizione).
+
+```sql
+select employee_id, first_name, job_id, nth_value(first_name,2) over (partition by job_id order by employee_id asc)
+from employees
+```
+
+![alt text](image-15.png)
