@@ -500,3 +500,7 @@ Immaginiamo ora di avere **sorgente**:
 | G      | H      | I      |
 
 e **target inizialmente vuota**.
+
+
+Vediamo ora i componenti tDBSCDELT e tDBSCD che hanno una limitazione, funzionano presupponendo che sorgente e target risiedono nella stessa base di dati.
+Inoltre in questo caso *enddate* assumerà un valore null non *infinito*.
