@@ -576,6 +576,97 @@ Allora *target* diventa:
 | D               | E      | Y      | 04/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
 
 
+### <u> Ese 1 </u>
+
+Per l'esercizio 1 dobbiamo riptere quanto riportato prima su Talend. Per fare ciò abbiamo bisogno di configurare due subjob:
+- uno per inserimento/aggiornamento
+- uno per cancellazioni
+
+Entrambi sfruttano la presenza di un tSetGlobalVar nel tPrejob che imposta 3 variabili globali:
+- startdate = TalendDate.getCurrentDate()
+- enddate = TalendDate.addDate(TalendDatre.getCurrentDate, -1, "ss")
+- dummy_enddate = TalendDate.parseDate("yyyy-MM-dd HH:mm:ss","9999-12-31 23:59:59")
+
+Per il primo subjob utilizziamo due tDbInput, rispettivamente:
+1. per leggere da *sorgente*
+2. per leggere da *target*
+
+Per il primo usiamo la seguente query:
+```sql
+select 
+	campo1, 
+	campo2,
+	campo3
+from sorgente
+```
+
+Per il secondo usiamo la seguente query:
+```sql
+select 
+	campo1, 
+	campo2, 
+	campo3,
+	startdate
+from target
+where actualtag = true
+```
+
+Configuriamo poi i due tDbInput in un tMap dove andiamo a eseguire una `INNER JOIN` tra i due flussi. In questo modo abbiamo:
+1. i record di *target* che matchano sulla chiave di join (`campo1`) di cui andremo a vedere se ci sono state delle modifiche sugli altri campi 
+2. i record di *sorgente* che non matchano sulla chiave di join, attraverso left join, e che quindi devono essere inseriti.
+
+Per il secondo flusso andiamo a copiare i dati della *sorgente* in output e inserendo i 3 campi tecnici aggiuntivi:
+- `start_date` = ((Date)globalMap.get("start_date"))
+- `end_date` = ((Date)globalMap.get("dummy_end_date"))
+- `actual_tag` = true
+
+Per il primo flusso invece definiamo una variabile nel tMap che si occupa di controllare, per i record restituiti dalla `INNER JOIN`, se ci sono state variazioni negli altri campi. Questa variabile è una booleana del tipo:
+```java
+java.util.Objects.equals(from_sorgente.campo2,from_target.campo2) &&
+java.util.Objects.equals(from_sorgente.campo3,from_target.campo3)
+```
+
+Utilizziamo il metodo `Objects.equals` in quanto null-safe (se confrontiamo due null ci restituisce true, un null e uno definito restituisce false).
+
+Successivamente questa variabile viene usata per filtrare i record da aggiornare (flusso 1) in due sottoflussi:
+- *to_update*: record effettivamente che rappresenta una nuova versione di uno precedente
+- *no_action*: record che non ha subito modifica su *sorgente* e che non deve subire modifiche su *target*
+
+Situazione del tMap:
+
+![alt text](img/image%20(2).png)
+
+Successivamente il flusso *to_ins* finisce in input a tDBOutput che scriverà sulla tabella *target* con modalità *Insert*.
+
+Il flusso *to_update* finisce in un secondo tMap in quanto il record da aggiornare deve subire due processi, in due flussi separati:
+- il primo flusso riguarda l'inserimento di quei nuovi dati (la versione che dovrà risultare valida) e quindi aggiungiamo i valori di `start_date` attuale, `end_date` a *dummy* e `actual_tag` a true.
+- il secondo flusso deve invalidare la versione che ora non è più considerata valida. Di conseguenza aggiungiamo `end_date`= ((Date)globalMap.get("end_date")) e `actual_tag`=false
+
+Successivamente il primo flusso entra in un tDBOutput che eseguirà una *Insert* su *target* e il secondo flusso una *Update* su  *target* (update che viene fatta sfruttando la coppia che identifica la chiave (campo1,start_date)).
+
+
+Per quanto riguarda il job di cancellazione, deve eseguire una `LEFT ANTI JOIN` tra *target* e *sorgente*, dove abbiamo le seguenti query rispettivamente nei due tDBInput:
+```sql
+select 
+	campo1,
+	startdate
+from target
+where actualtag = true
+```
+
+```sql
+select 
+	campo1
+from sorgente
+```
+
+Nel tMap, dopo aver configurato la left anti, andiamo a inserire sul flusso di output `end_date`= ((Date)globalMap.get("end_date")) e `actual_tag`=false. Analogamente per l'update, abbiamo bisogno di portarci in output la chiave del record (la coppia campo1,start_date) su cui calcolarci la *Delete* attraverso un tDBOutput su *target*. Situazione del secondo tMap:
+![alt text](img/image-1%20(2).png)
+
+Vista final del job:
+
+![alt text](img/image-2%20(2).png)
+
 
 Vediamo ora i componenti tDBSCDELT e tDBSCD che hanno una limitazione, funzionano presupponendo che sorgente e target risiedono nella stessa base di dati.
 Inoltre in questo caso *enddate* assumerà un valore null non *infinito*.
