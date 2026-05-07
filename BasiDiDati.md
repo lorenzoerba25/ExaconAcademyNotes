@@ -194,7 +194,7 @@ CREATE TABLE Video(
 );
 ```
 
-![alt text](image-1.png)
+![alt text](/img/image-1.png)
 
 Esempio *inline*:
 ```sql
@@ -679,7 +679,7 @@ Procedendo in ordine e introduciamo la `LEFT JOIN`. Da un punto di vista di esec
 
 Da un punto di vista insiemistico la `LEFT JOIN` può essere vista in questo modo:
 
-![alt text](image-2.png)
+![alt text](/img/image-2.png)
 
 La sintassi della `LEFT JOIN` è:
 ```sql
@@ -705,7 +705,7 @@ La `RIGHT JOIN` opera ugualmente ma semplicemente calcola la join a partire dall
 
 Da un punto di vista insiemistico la `RIGHT JOIN` può essere vista in questo modo:
 
-![alt text](image-3.png)
+![alt text](/img/image-3.png)
 
 La sintassi della `RIGHT JOIN` è:
 ```sql
@@ -734,7 +734,7 @@ Introduciamo ora la `FULL OUTER JOIN` che può essere vista come l'unione delle 
 
 Da un punto di vista insiemistico la `FULL OUTER JOIN` può essere vista in questo modo:
 
-![alt text](image-4.png)
+![alt text](/img/image-4.png)
 
 La sintassi della `FULL OUTER JOIN` è:
 ```sql
@@ -761,7 +761,7 @@ Ora introduciamo le `ANTI JOIN` che rispettano il funzionamento delle precedenti
 
 Per la `LEFT ANTI JOIN` possiamo notare che il risultato insiemistico coincide con:
 
-![alt img](image-5.png)
+![alt img](/img/image-5.png)
 
 E da un punto di vista sintattico abbiamo:
 ```sql
@@ -786,7 +786,7 @@ Analogamente funziona la `RIGHT ANTI JOIN` che in questo caso restituisce solo i
 
 Da un punto di vista insiemistico abbiamo:
 
-![alt text](image-6.png)
+![alt text](/img/image-6.png)
 
 E la sintassi della `RIGHT ANTI JOIN`:
 ```sql
@@ -811,7 +811,7 @@ Infine introduciamo la `FULL OUTER ANTI JOIN` che di fatto è l'unione della `LE
 
 Dal punto di vista insiemistico abbiamo:
 
-![alt text](image-7.png)
+![alt text](/img/image-7.png)
 
 La sintassi della `FULL OUTER ANTI JOIN` è:
 ```sql
@@ -857,7 +857,7 @@ from (values('Martini','Laura'), ('Santi','Simone')) /* ometto alias, comanda la
 
 Con la keyword `explain` in testa a una query, posso vedere l'execution-plan di quella query, da leggere dal basso verso l'alto:
 
-![alt text](image.png)
+![alt text](/img/image.png)
 
 Nel caso di union, un duplicato è un record che compare sia in un insieme che nell'altro mentre nel caso di intersect significa che ho due o più record uguali in entrambi gli insiemi.
 
@@ -1662,102 +1662,145 @@ Le window function che possiamo utilizzare sono quelle derivanti dalle funzioni 
 oppure le window function 'pure':
 - row_number()
 - rank()
-- dense rank()
-- percent rank()
+- dense_rank()
+- percent_rank()
 - cume_dist()
 - ntile(n)
 - lag(value [, offset, default])
 - lead(value [, offset, default])
-- first value(value)
-- last value(value)
+- first_value(value)
+- last_value(value)
 - nth
 
 La window function `row_number` permette di produrre un numero progressivo (a partire da 1) per i vari record all'interno della partizione.
 - Non necessita parametri in input
 - se non specifichiamo la clausola `order by` l'ordinamento prodotto sarà randomico (a ogni esecuzione un esito diverso)
+- se specifichiamo la clausola `order by` l'ordinamento viene calcolato per ciascuna partizione a partire da 1 valutando il window frame corrente  e in caso di *peers* uno possiede il valore *n* e il successivo *n+1*.
+
 ```sql
 SELECT employee_id, job_id, row_number() over (partition by job_id)
 FROM employees
 ```
-![alt text](image-8.png)
+![alt text](/img/image-8.png)
 
-La window function `rank` permette di produrre il 'rango' del record corrente (con gap), ovvero il row_number del primo record nel gruppo di peers a cui appartiene il record corrente.
-- **rank necessita di ordinamento**, perché per produrre il progressivo utilizza appunto l'ordinamento specificato nella clausola order by
-- I peers avranno appunto lo stesso valore progressivo, il record successivo ai peers
-avrà un progressivo che prevede un gap rispetto al progressivo precedente (il gap
-sarà pari al numero di peers)
+La window function `rank` permette di produrre il 'rango' del record corrente (con *gap*), ovvero il row_number del primo record nel gruppo di peers a cui appartiene il record corrente.
+- **rank necessita di ordinamento**, perché per produrre il progressivo utilizza appunto l'ordinamento specificato nella clausola `order by`
+- I peers avranno appunto lo stesso valore progressivo, il record successivo ai peers avrà un progressivo che prevede un gap rispetto al progressivo precedente (il gap sarà pari al numero di peers)
 
 ```sql
 SELECT employee_id, job_id, rank() over (partition by job_id order by first_name desc)
 FROM employees
 ```
-![alt text](image-9.png)
+![alt text](/img/image-9.png)
 
-La window function 'dense_rank'
-
-
-La window function `percent_rank` rende il rank del reocrd corrente in percentuale, calcolato utilizzando questa formula $\frac{rank - 1}{numeroRighePartizione -1}$. 
-- Il primo record della partizione (e i suoi peers) hanno sempre rank=1 quindi percent_rank = 0
+La window function 'dense_rank' ha lo stesso comportamento della `rank` ma non genera *gap* nei progressivi generati. Analogamente alla precedente necessita di ordinamento.
 
 ```sql
-
+SELECT employee_id, job_id, rank() over (partition by job_id order by first_name desc)
+FROM employees
 ```
-![alt text](image-10.png)
 
-La window function `cume_dist` restituisce la distribuzione cumulativa (ovvero la frazione di valori minori o uguali rispetto al valore corrente all'interno della partizione). Il valore della window function è calcolato valutando questa formula: $\frac{a}{a}$
+![alt text](/img/image-16.png)
+
+La window function `percent_rank` rende il rank del record corrente in percentuale, calcolato utilizzando questa formula $\frac{rank - 1}{numeroRighePartizione -1}$ 
+- Il primo record della partizione (e i suoi peers) hanno sempre rank=1 quindi `percent_rank` = 0.
+- Analogamente alle altre rank, `percent_rank` richiede ordinamento.
 
 ```sql
-
+SELECT job_id, first_name,
+rank() over (
+  partition by job_id order by first_name desc
+),
+percent_rank() over (
+  partition by job_id order by first_name desc
+)
+FROM employees
 ```
-![alt text](image-11.png)
+![alt text](/img/image-10.png)
 
-La window function `ntile(n)` resttuisce, dato in input un valore intero, di suddividere i record ordinati all'interno di una partizione in quel numero di gruppi in uscita, facendo in modo di mantenere gruppi dello stesso numero di record.
+La window function `cume_dist` restituisce la distribuzione cumulativa (ovvero la frazione di valori minori o uguali rispetto al valore corrente all'interno della partizione). Il valore della window function è calcolato valutando questa formula: $\frac{\#recordPrecedentiOPeerDelRecordCorrente}{\#RecordPartizione}$
+
+- Nella formula sopra le righe precedenti si riferiscono alla partizione del record corrente
+- La window function `cume_dist` restituisce un double compreso in (0,1]
+- La window function `cume_dist` necessita ordinamento
+```sql
+SELECT job_id, first_name,
+cume_dist() over (
+  partition by job_id order by first_name desc
+)
+FROM employees
+```
+![alt text](/img/image-11.png)
+
+La window function `ntile(n)` permette, dato in input un valore intero, di suddividere i record ordinati all'interno di una partizione in quel numero di gruppi in uscita, facendo in modo di mantenere gruppi dello stesso numero di record.
 - i gruppi prendono il nome di *bucket*
 - i valori assunti dalla window function sono compresi tra 1 e N: il primo bucket ha numero 1, i successivi saranno 2 ecc, fino ad arrivare al valore specificato come parametro della funzione
+- la funzione `ntile` necessita ordinamento
 
 ```sql
-SELECT job_id,employee_id, first_name
-FROM ntile(3) over ()
+SELECT job_id,employee_id, first_name,
+ntile(3) over (partition by job_id order by employee_id)
+FROM employees
 ```
 
-![alt text](image-12.png)
+![alt text](/img/image-12.png)
 
 
 La funzione `lag(value,[offset,default])` e `lead(value,[offset,default])` richiedono 3 parametri:
 - `value` (obbligatorio): rappresenta il valore osservato dalla funzione (può essere un'espressione)
 - `offset` (opzionale, di base a 1): il numero di record precedenti su cui valutare la `value`
 - `default` (opzionale, di base a NULL): se non esiste il record all'indietro restituisce come valore della lag il valore associato come parametro di default (che dev'essere dello stesso datatype di `value`)
+- entrambe necessitano di ordinamento.
 
 Ovviamente guardando indietro il `default` trova utilizzo sui primi record, che non hanno antecedenti.
 ```sql
-select employee_id, first_name, job_.id, lag(employee_id) over (partition by job_id)
+select employee_id, first_name, job_id, lag(employee_id) over (partition by job_id)
 from employees
 ```
 
-![alt text](image-13.png)
+![alt text](/img/image-13.png)
 
 
 Vediamo un altro esempio sulla lag:
 
 ```sql
-select employee_id, first name, job_.id, lag(employee_id,2,-1) over (partition by job_id)
+select employee_id, first_name, job_.id, lag(employee_id,2,-1) over (partition by job_id)
 from employees
 ```
 
-![alt text](image-14.png)
+![alt text](/img/image-14.png)
 
 La funzione `lead` al contrario, lag guarda indietro, guarda in avanti. Quindi cerca il `value` su `offset` record successivi. Se non lo trova usa il valore di `default`.
 
 Ovviamente guardando avanti il `default` trova utilizzo sugli ultimi record, che non hanno successivi.
 
+```sql
+SELECT employee_id, first_name, job_id, 
+lead(employee_id) over (partition by job_id)
+```
+
+![alt text](/img/image-17.png)
+
 
 La funzione `first_value(value)` assume il valore `value` valutato sul primo record della partizione a cui appartiene il record corrente.
 
 ```sql
-
+SELECT employee_id, first_name, job_id,
+first_value(first_name) over (partition by job_id order by employee_id asc)
+FROM employees
 ```
 
+![alt text](/img/image-18.png)
+
 Analogamente `last_value(value)` assume il valore `value` valutato sull'ultimo record della partizione a cui appartieene il record corrente. Nel caso di first_value che ci sia o meno order by non cambia perchè il primo record è uguale per tutti i frame, ma nel caso di last_value l'ultimo record cambia a ogni frame perchè viene popolato. Quindi in linea di massima possiamo dire che la last_value con order by restituisce sempre o il record corrente o un suo peer.
+
+
+```sql
+SELECT employee_id, first_name, job_id,
+last_value(first_name) over (partition by job_id)
+```
+
+![alt text](/img/image-19.png)
 
 La funzione `nth_value(value, nth)` restituisce il valore `value` valutato sull `nth`-esimo record del frame del record corrente.
 - Se nth-esimo record nella partizione non esiste,
@@ -1779,8 +1822,9 @@ non comprende l'nth-esimo record della
 partizione).
 
 ```sql
-select employee_id, first_name, job_id, nth_value(first_name,2) over (partition by job_id order by employee_id asc)
+select employee_id, first_name, job_id, 
+nth_value(first_name,2) over (partition by job_id order by employee_id asc)
 from employees
 ```
 
-![alt text](image-15.png)
+![alt text](/img/image-15.png)
