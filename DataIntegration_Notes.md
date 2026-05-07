@@ -488,18 +488,93 @@ Possono essere di diverso tipo, sei, ma noi ne vedremo 4:
 A livello teorico potremmo avere un SCD per ogni campo ma questo potrebbe complicare le cose. Immaginiamo una tabella anagrafica utente. Potrebbe tornare comodo avere una SCD tipo 1 sul campo *nome* e tipo 2 sul campo *indirizzo*, ma questo causerebbe difficoltà di gestione perchè non manteniamo storicità su nome ma per via di indirizzo si.
 
 Vediamo ora un esempi di implementazione di SCD di tipo 2 attraverso dei campi tecnici:
-- `STARTDATE`: è il momento in cui il record inizia ad avere validità (momento in cui nasce il record)
-- `ENDDATE`: momento in cui il record cessa di avere validità (per i record attivi, ossia quelli presenti al momento corrente nella tabella SORGENTE, il campo sarà valorizzato con una data fittizia (*dummy*)/con null poichè questi record non hanno una data di fine validità)
+- `STARTDATE`: è il momento in cui il record inizia ad avere validità (momento in cui nasce il record), solitamente il momento di inizio del job.
+- `ENDDATE`: momento in cui il record cessa di avere validità (per i record attivi, ossia quelli presenti al momento corrente nella tabella SORGENTE, il campo sarà valorizzato con una data fittizia (*dummy*)/con null poichè questi record non hanno una data di fine validità). Quando invece il record cessa di essere valido, questo valore assume il valore di inizio job meno un secondo
 - `ACTUAL TAG`: campo utilizzato per discriminare un record attivo da uno inattivo (i record con `actual_tag=0` sono quelli contenenti lo storico delle variazioni dei record nella tabella sorgente mentre i record con `actual_tag=1` sono quelli presenti al momento corrente nella tabella sorgente). Solitamente un booleano o un intero.
 
 Immaginiamo ora di avere **sorgente**:
-| Campo1 | Campo2 | Campo3 |
-| ------ | ------ | ------ |
-| A      | B      | C      |
-| D      | E      | F      |
-| G      | H      | I      |
 
-e **target inizialmente vuota**.
+| campo1 (chiave) | campo2 | campo3 |
+| --------------- | ------ | ------ |
+| A               | B      | C      |
+| D               | E      | F      |
+| G               | H      | I      |
+
+
+e **target inizialmente vuota**:
+| campo1 (chiave) | campo2 | campo3 | STARTDATE | ENDDATE | ACTUAL_TAG |
+| --------------- | ------ | ------ | --------- | ------- | ---------- |
+|                 |        |        |           |         |            |
+
+Importante notare che *target* non può impostare un vincolo di chiave primaria solo su `campo1` perchè abbiamo in mente di mantenere uno storico e quindi quel record potenzialmente comparirà più volte. La scelta migliore e utile è impostare una chiave composta da:
+- il/i campo/i chiave di sorgente
+- startdate
+In questo modo non possiamo avere due record con stessa chiave e stesso startdate. Questo significherebbe leggere due versioni della stessa chiave nello stesso momento (ma `campo1` è chiave su *sorgente* quindi non può apparire più di una volta).
+Lo stesso ragionamento lo si può applicare alla composita:
+- il/i campo/i chiave di sorgente
+- enddate
+In questa variante non possiamo avere due record con stessa chiave e stesso enddate, il quale può assumere due valori:
+- dummy, quindi no due record con stessa chiave e validi allo stesso momento (solo una versione è valida in un certo startdate)
+- valore valido, quindi no due record con stessa chiave invalidati nello stesso momento (il processo di invalidazione riguarda solo la versione con actual_tag=1 e per sua natura actual_tag è a 1 solo su un record per quella chiave altrimenti avrei più versioni valide)
+
+Alla prima esecuzione del job (ore 18:30 del 03/03/2022) abbiamo *target* che verrà popolata in full in quanto vuota e avremo una situazione simile:
+
+| campo1 (chiave) | campo2 | campo3 | STARTDATE           | ENDDATE             | ACTUAL_TAG |
+| --------------- | ------ | ------ | ------------------- | ------------------- | ---------- |
+| A               | B      | C      | 03/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+| D               | E      | F      | 03/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+| G               | H      | I      | 03/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+
+Se immaginiamo che succesivamente *sorgente* subisce una modifica su alcuni record, dobbiamo andare a mantenere lo storico sui vecchi dati, invalidandoli e inserendo il nuovo record come valido. Il processo di invalidazione di un record prevede:
+- cercare in *target* i record che hanno la stessa chiave di sorgente e *actual_tag* a 1
+- confrontare quali record sono cambiati (hanno gli altri campi differenti o uguali?)
+- successivamente bisogna eseguire
+  - inserimento della nuova versione in *target* con actual_tag a 1, startdate impostata come data di inizio job e enddate *dummy*
+  - aggiornamento della vecchia versione impostando actual_tag a 0 e enddate alla data di inizio job meno un secondo. Il campo startdate non dev'essere toccato in quanto ci comunica da quale momento quel record era considerato valido nel nostro storico.
+
+**Nota bene**:
+L'invalidazione del record (aggiornamento del vecchio e inserimento del nuovo) deve avvenire nella stessa transazione. Questo è molto importante in quanto garantiamo che *target* sia sempre in uno stato coerente e valido. Se durante il processo di invalidazione qualcosa andasse storto e non fossimo nella stessa trasanzione avremmo come risultato la presenza di record invalidati senza avere una versione valida o viceversa due record validi senza che il vecchio sia stato invalidato. In caso di errore possiamo fare un rollback e ripristinare l'ultima versione che sicuramente è coerente in quanto sarebbe la situazione che si aveva a eseuzione del flusso. 
+
+Quindi se ora *sorgente* diventa:
+| campo1 (chiave) | campo2 | campo3 |
+| --------------- | ------ | ------ |
+| A               | B      | X      |
+| D               | E      | Y      |
+| G               | H      | I      |
+
+*target* deve procedere a invalidare il record con `campo1=A` e `campo1=D` impostando `actual_tag` a 0 e enddate alla data di esecuzione del job meno un secondo (supponiamo il job venga eseguito ogni giorno alle 18:30) e a inserire il nuovo record impostando `startdate` alla data/ora attuale di inizio job, `enddate` *dummy* e `actual_tag` a 1.
+
+Quindi *target* diventa:
+| campo1 (chiave) | campo2 | campo3 | STARTDATE           | ENDDATE             | ACTUAL_TAG |
+| --------------- | ------ | ------ | ------------------- | ------------------- | ---------- |
+| A               | B      | C      | 03/03/2022 18:30:00 | 04/03/2022 18:29:59 | 0          |
+| D               | E      | F      | 03/03/2022 18:30:00 | 04/03/2022 18:29:59 | 0          |
+| G               | H      | I      | 03/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+| A               | B      | X      | 04/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+| D               | E      | Y      | 04/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+
+
+Immaginiamo ora di avere delle cancellazioni su *sorgente*. In alcuni casi potrebbe essere presente un campo tecnico *deleted*, un flag, che ci informa che il record indicato è stato eliminato. In questo caso andremmo a *flaggare* anche noi il nostro record come *deleted*. In asssenza di questo campo, come nel nostro caso si va a eseguire la classica `LEFT ANTI JOIN` tra *target* e *sorgente*, filtrando per i campi con `actual_tag` a 1. Quindi andiamo a chiederci "quali dei record attualmente validi sono stati eliminati in sorgente?"
+
+Questa join ci restituisce i record attivi di *target* che non hanno fatto match con quelli in *sorgente* e procediamo semplicemente a invalidare tali record. Analogamente a prima dovremmo:
+- impostare `enddate` alla data di esecuzione job meno un secondo
+- impostare `actual_tag` a 0.
+
+Quindi se *sorgente* ora fosse (05/03/2022 18:30:00):
+| campo1 (chiave) | campo2 | campo3 |
+| --------------- | ------ | ------ |
+| A               | B      | X      |
+| D               | E      | Y      |
+
+Allora *target* diventa:
+| campo1 (chiave) | campo2 | campo3 | STARTDATE           | ENDDATE             | ACTUAL_TAG |
+| --------------- | ------ | ------ | ------------------- | ------------------- | ---------- |
+| A               | B      | C      | 03/03/2022 18:30:00 | 04/03/2022 18:29:59 | 0          |
+| D               | E      | F      | 03/03/2022 18:30:00 | 04/03/2022 18:29:59 | 0          |
+| G               | H      | I      | 03/03/2022 18:30:00 | 05/03/2022 18:29:59 | 0          |
+| A               | B      | X      | 04/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+| D               | E      | Y      | 04/03/2022 18:30:00 | 31/12/9999 23:59:59 | 1          |
+
 
 
 Vediamo ora i componenti tDBSCDELT e tDBSCD che hanno una limitazione, funzionano presupponendo che sorgente e target risiedono nella stessa base di dati.
