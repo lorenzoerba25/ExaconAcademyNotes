@@ -667,6 +667,90 @@ Vista final del job:
 
 ![alt text](img/image-2%20(2).png)
 
+### <u> Ese 2 </u>
+Vediamo ora i componenti tDBSCDELT e tDBSCD che hanno una limitazione, funzionano presupponendo che *sorgente* e *target* risiedono nella stessa base di dati. Questi componenti fanno tutto quanto loro in un unico componente.
 
-Vediamo ora i componenti tDBSCDELT e tDBSCD che hanno una limitazione, funzionano presupponendo che sorgente e target risiedono nella stessa base di dati.
-Inoltre in questo caso *enddate* assumerà un valore null non *infinito*.
+Il tDBSCDELT prevede di specificare:
+- tabella sorgente
+- tabella target
+- lo schema della tabella target
+- specificare la chiave surrogata della tabella target (un'altra limitazione di questi componenti è proprio il fatto che lavorano solo attraverso chiavi surrogate)
+  - specificare la crezione della chiave surrogata che può essere attraverso un auto increment (ma se la tabella è vuota, l'*autoincrement* fa +1 del MAX(surrogate_key), ed essendo vuota il massimo è `NULL` e quindi restituirebbe sempre `NULL`)
+  - oppure *DB sequence*, specificando il nome del generatore della sequenza (creato appositamente)
+- chiave della sorgente
+- possibilità di indicare se vogliamo usare una SCD di tipo 1 o 2
+- specificare i campi della scd di tipo 2 (nel nostro caso campo2 e campo3), ovvero i campi su cui tracciare lo storico
+- specificare i campi di startdate ed enddate. Inoltre in questo caso *enddate* assumerà un valore null non *infinito/dummy* nel caso di record attualmnente valido.
+- possibilità di loggare i record attualmente validi e specificarne il campo associato (`actual_tag`) di tipo intero.
+
+Di seguito vediamo alcuni comandi SQL necessari al funzionamento:
+```sql
+create sequence scd_sequence increment by 1 start 1 minvalue 0;
+create table sorgente (
+	campo1 VARCHAR primary key,
+	campo2 VARCHAR,
+	campo3 VARCHAR
+);
+
+-- must specify timestamp or timestamp(6) because tDBSCDELT use default timestamp(3) -- 
+create table target (
+	surrogate_key serial primary key,
+	campo1 VARCHAR,
+	campo2 VARCHAR,
+	campo3 VARCHAR,
+	startdate timestamp,
+	enddate timestamp,
+	actualtag integer
+);
+```
+
+Come prima configuriamo il subjob per la cancellazione come prima.
+
+Configurazione del component tDBSCDELT:
+
+![alt text](img/image-24.png)
+
+Situazione attuale del job:
+
+![alt text](img/image-23.png)
+
+Ora vediamo la configurazione del tDBSCD, un componente molto simile che fornisce la possibilità di configurare anche SCD di tipo 0 e di tipo 3.
+
+All'interno del componente andiamo ad aggiungere per prima cosa il nome della tabella target, nel nostro caso "target" e colleghiamo un tDBOutput con un connettore *main* al tDBSCD il quale riceverà il risultato di una `select * from sorgente`.
+Successivamente modifichiamo lo schema da *edit schema* affinchè contenga solo ed esclusivamente i campi dei record presenti in target (solo campi dati non campi tecnici).
+
+Successivamente configuriamo l'SCD editor dove:
+- i campi *unused* sono i campi non utilizzati dello schema
+- in *source keys* specifichiamo i campi chiave di sorgente
+- in *type 0 fields* i campi da tracciare per l'scd di tipo 0 (i campi su cui ci preoccupiamo di vedere se ci sono state modifiche)
+- in *type 1 fields* i campi da tracciare per l'scd di tipo 1 (i campi su cui ci preoccupiamo di vedere se ci sono state modifiche)
+- in *type 2 fields* i campi da tracciare per l'scd di tipo 2 (i campi su cui ci preoccupiamo di vedere se ci sono state modifiche)
+- in *type 3 fields* dobbiamo specificare il nome della colonna (vecchia e nuova) su cui vogliamo applicare l'scd di tipo 3
+- *surrogate keys* è la sezione dove specifichiamo la chiave surrogata di *target*
+  - *name* è il nome della chiave surrogata
+  - creation permette di specificare il modo in cui quella chiave viene creata
+    - Auto increment, come nel caso precedente
+    - Input field, specifichiamo il valore che assumerà la chiave tramite parametro input
+    - Routine, specifichiamo il valore tramitèuna routine Talend
+    - Table max + 1, identico a Auto Increment ma non soffre del problema `NULL + 1`
+    - DB Sequence, specifichiamo il nome della sequence che genera il prossimo valore
+- in *versioning* specifichiamo i campi di versionamento
+  - *start* è il campo *per* lo start date, dove specifichiamo il nome del campo sul db sotto *name* e come *creation* specifichiamo *Job start time*
+  - *end* è il campo *per* end date, dove specifichiamo il nome del campo sul db sotto *name* e come *creation* specifichiamo *Fixed year per value* e inseriamo `9999`. Questo permette di configurare un valore *dummy* per quell'anno, che è `9999-01-01 12:00:00`
+  - *version* permette di generare un campo di versionamento (versione 1,2,...,n) e nel nostro caso non lo attiviamo
+  - *active* permette di generare un campo che identifica la versione attiva. Nel nostro caso specifichiamo sotto *name* actualtag
+
+Situazione del tDBSCD:
+
+![alt text](img/image-25.png)
+
+Una volta confermato il tutto, possiamo notare che nello schema avremo i campi precedentemente specificati + i campi tecnici aggiunti da Talend (colorati di verde e non modificabili se non il *datatype*). Nel nostro caso indichiamo che:
+- `actualtag` è di tipo intero (precedentemente booleano)
+- `surrogate_key` è di tipo intero (precedentemente string)
+
+![alt text](img/image-26.png)
+
+Infine questo è il job finale:
+
+![alt text](img/image-27.png)
+
