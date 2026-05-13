@@ -1746,7 +1746,7 @@ FROM employees
 ![alt text](/img/image-12.png)
 
 
-La funzione `lag(value,[offset,default])` e `lead(value,[offset,default])` richiedono 3 parametri:
+La funzione `lag(value,[offset,default])` permette di prelevare il valore (`value`) su `offset` record precedenti, e se non lo trova restituisce `default`. Tale funzione richiede 3 parametri:
 - `value` (obbligatorio): rappresenta il valore osservato dalla funzione (può essere un'espressione)
 - `offset` (opzionale, di base a 1): il numero di record precedenti su cui valutare la `value`
 - `default` (opzionale, di base a NULL): se non esiste il record all'indietro restituisce come valore della lag il valore associato come parametro di default (che dev'essere dello stesso datatype di `value`)
@@ -1770,7 +1770,7 @@ from employees
 
 ![alt text](/img/image-14.png)
 
-La funzione `lead` al contrario, lag guarda indietro, guarda in avanti. Quindi cerca il `value` su `offset` record successivi. Se non lo trova usa il valore di `default`.
+La funzione `lead(value,[offset,default])` al contrario, dato che lag guarda indietro, guarda in avanti. Quindi cerca il `value` su `offset` record successivi. Se non lo trova usa il valore di `default`.
 
 Ovviamente guardando avanti il `default` trova utilizzo sugli ultimi record, che non hanno successivi.
 
@@ -1792,7 +1792,11 @@ FROM employees
 
 ![alt text](/img/image-18.png)
 
-Analogamente `last_value(value)` assume il valore `value` valutato sull'ultimo record della partizione a cui appartieene il record corrente. Nel caso di first_value che ci sia o meno order by non cambia perchè il primo record è uguale per tutti i frame, ma nel caso di last_value l'ultimo record cambia a ogni frame perchè viene popolato. Quindi in linea di massima possiamo dire che la last_value con order by restituisce sempre o il record corrente o un suo peer.
+Analogamente `last_value(value)` assume il valore `value` valutato sull'ultimo record della partizione a cui appartieene il record corrente. 
+
+Importante notare che la funzione `first_value` non restituisce valori differenti fissato un determinato ordine (in quanto il window frame cresce verso il basso ma tutti i record punteranno sempre alla cima del window frame, che una volta "nato" mantiene sempre il primo record inalterato e nella stessa posizione). Viceversa, la funzione `last_value`, fornisce di volta in volta un valore differente fissato un determinato ordine, perchè il window frame crescendo verso il basso aggiorna di volta in volta quello che, "attualmente", è l'ultimo valore. 
+
+Quindi fissato un determinato ordine la `first_value` restituisce sempre il primo record, indipendentemente dal record che stiamo valutando (la cima è uguale per tutti), mentre invece `last_value` restituisce sempre l'ultimo record del window frame corrente (che coincide con il record stesso o un suo *peer* nell'ordinamento).
 
 
 ```sql
