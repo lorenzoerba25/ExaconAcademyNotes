@@ -754,3 +754,46 @@ Infine questo è il job finale:
 
 ![alt text](img/image-27.png)
 
+
+### <u> Ese 3 </u>
+
+Per quanto riguarda l'esercizio 3, è richiesto di replicare la logica SCD attraverso l'utilizzo di PL/pgSQL, che è il linguaggio procedurale messo a disposizione da PostgresSQL.
+Di seguito riportiamo la logica implementata all'interno di un'unica procedura:
+```sql
+create or replace procedure procedure_scd() language plpgsql as $$
+declare 
+dummy_end_date timestamp := '9999-12-31 23:59:59';
+start_job timestamp := current_timestamp;
+end_date timestamp := start_job - interval '1 second';
+
+begin
+	update target t
+	set enddate = end_date, 
+		actualtag = false
+	from sorgente s
+	where s.campo1 = t.campo1 
+		and t.actualtag = true 
+		and (s.campo2 is distinct from t.campo2 or s.campo3 is distinct from t.campo3);
+	
+	insert into target (campo1,campo2,campo3,startdate,enddate,actualtag)
+	select s.campo1,s.campo2, s.campo3, start_job, dummy_end_date, true
+	from sorgente s
+	left join target t on s.campo1=t.campo1 and t.actualtag=true
+	where t.campo1 is null;
+
+
+	with to_del as (
+	select t.campo1, t.startdate
+	from target t
+	left join sorgente s
+		on t.campo1 = s.campo1
+	where s.campo1 is null
+	)
+	update target t
+	set enddate = end_date, actualtag=false
+	from to_del td
+	where t.campo1 = td.campo1 and t.startdate = td.startdate;
+end;
+$$;
+```
+e di volta in volta possiamo invocarla attraverso la chiamata `call procedure_scd()`.
