@@ -797,3 +797,19 @@ end;
 $$;
 ```
 e di volta in volta possiamo invocarla attraverso la chiamata `call procedure_scd()`.
+
+## Logica semaforica
+Una logica semaforica ci serve per sincronizzare diversi flussi che hanno dipendenze fra di loro. 
+
+Ad esempio tabella anagrafica clienti e venduto sappiamo che la tabella di venduto è dipendente da anagrafica clienti quindi prima eseguiamo una anagrafica clienti che è aggiornata e completa e poi del venduto. L'idea potrebbe essere di eseguire in modo sequenziale ma non si usa perchè pensiamo a un caso molto semplice (venduto abbia una sola dipendenza e non abbiamo altri flussi orbitanti). Di fatti se da venduto dipende l'ordinato, dall'ordinato il prenotato etc rischiamo di avere una catena sequenziale di esecuzione.
+
+Un altro caso è quando abbiamo un flusso delle vendite che non dipendente totalmente dal cliente. Per esempio il venduto ha diversi step:
+- prendi i dati sorgente e portali in una tabella ponte
+- dalla tabella ponte portala in un secondo job
+- integra coi dati del clienti (e quindi i primi 2 non dipendono dal cliente).
+Quindi se vado ad applicare una logica sequenziale, non sto ottimizzando i processi (2/3 del processo descritto prima non dipende dal cliente). Con le logiche semaforiche invece introduciamo anche ottimizzazione nell'esecuzione dei flussi.
+
+Esistono diverse logiche semaforiche ma noi vedremo quelle basate su file. Su file significa che noi eseguiamo un flusso, terminata l'esecuzione generiamo un file semaforo e i flussi successivi, che erano in attesa di quel semaforo, possono partire
+
+Possiamo generare una logica semaforica tramite API, record inseriti a DB. Importante comunque il concetto di **polling** indipendentemente dal tipo di logica semaforica.
+Nel caso di prima, se vendite (che ha bisogno due ore per essere eseguito) parte insieme a cliente (che ha bisogno mezz'ora per essere eseguito) e vendite dipende con logica semaforica da cliente io posso farli partire entrambi ma vendite deve continuare ad andare in polling per il file semaforo (vendite continua a controllare/chiedere se il semaforo esiste oppure no). Possiamo vederla come un check che vendite (che ha dipendenze) prova ogni intervallo di tempo a fare polling per un numero totale di tentativi/tempo. Se scade il tempo e non ho avuto mai esito positivo allora vendite termina
