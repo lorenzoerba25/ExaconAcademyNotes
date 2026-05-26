@@ -1832,3 +1832,154 @@ from employees
 ```
 
 ![alt text](/img/image-15.png)
+
+
+## PL/pgSQL
+
+PL/pgSQL è il linguaggio procedurale supportato da Postgres. Questo tipo di linguaggio permette di definire funzioni, procedure, trigger e istruzioni non esposte da SQL standard come cicli, controlli e dichiarazioni di variabili.
+Possiamo quindi definire ad esempio una procedura e successivmante invocarla dal nostro client database. Una funzione/procedura PL/pgSQL è definita tramite due blocchi:
+- il primo blocco tramite `DECLARE` dove possiamo dichiarere le variabili
+- il secondo blocco compreso tra `BEGIN END` che contiene il blocco del corpo
+
+Ad esempio:
+```sql
+[ DECLARE
+    declarations ]
+BEGIN
+    statements
+END [ label ];
+```
+
+Prima di un blocco declare (opzionale) e del correlato begin-end (obbligatorio) dobbiamo sempre specificare un'etichetta da associare a quel blocco. Quell'etichetta può essere una dichiarazione di creazione di funzione `CREATE FUNCTION`, di procedura `CREATE PROCEDURE`, di altre istruzioni o tramite l'istruzione `DO` che esegue un blocco di PL/pgSQL anonimo.
+```sql
+DO
+$$
+BEGIN
+    RAISE NOTICE '%', 'Hello, World';
+END;
+$$;
+```
+La dollar-quoted notation (che non è standard) ci permette di specificare il corpo della procedura/funzione (che è a tutti gli effetti una stringa). Di fatti ogni stringa dovrebbe iniziare con `$` seguito da uno o più caratteri (chiamati *tag*) che identificano l'apertura/chiusura di una stringa. Ad esempio il corpo di una funzione potrebbe essere racchiuso tra `$hello`. Lo svantaggio è che se usassimo caratteri particolari, come `'` oppure `"`, questi potrebbero causare conflitti laddove venissero usati per altri scopi. Quindi è possibile omettere il *tag* e identificare una stringa come `$$`.
+
+Definiamo ora delle variabili nel blocco `DECLARE` e stampiamole:
+```sql
+DO
+$$
+DECLARE
+name VARCHAR = 'Joe';
+BEGIN
+RAISE NOTICE 'Hello %', name;
+END;
+$$
+```
+Qui l'istruzione `RAISE NOTICE` permette di  stampare a video il contenuto specificato. Prima aveva un placeholder `%` che veniva sostituito dalla stringa da stampare, mentre in questo caso stampiamo *Hello* seguito dal nome contenuto nella variabile `name`.
+
+Le variabili possono essere dichiarate tramite la clausola `CONSTANT`, il che consente di definire delle costanti. Possiamo anche definirle `NOT NULL` per far si che non possono assumere valori `NULL`.
+```sql
+DO
+$$
+DECLARE 
+    total_quantity INT = 10;
+    ts CONSTANT timestamp NOT NULL= current_timestamp;
+BEGIN
+     DECLARE
+          total_quantity INT = 20;
+     BEGIN
+            RAISE NOTICE 'Total quantity %', total_quantity;
+            RAISE NOTICE 'Total quantity in the outer block %', main.total_quantity; 
+     END;
+END
+$$;
+```
+
+Vediamo l'istruzione `SELECT INTO` che consente di assegnare il risultato di una query a una variabile:
+```sql
+DO
+$$
+DECLARE
+    v_price DECIMAL;
+BEGIN
+    SELECT price INTO v_price
+    FROM products
+   WHERE product_id = 1;
+
+   RAISE NOTICE 'The price is %', v_price;
+END;
+$$;
+```
+
+L'istruzione `RAISE` non serve solo a stampare a video ma possiamo usare diversi nomi dopo per stampare delle info o eccezioni:
+- `RAISE DEBUG` usato per il debug del codice. 
+- `RAISE LOG` Scrive i messaggi nel log del server PostgreSQL, ma non inviarli al client
+- `RAISE NOTICE` scrive sullo standard output
+- `RAISE WARNING` avvisa il client senza interrompere l'esecuzione
+- `RAISE EXCEPTION` lancia un eccezione interrompendo l'esecuzione
+
+Vediamo ora come definire procedure/istruzioni, dove all'interno possiamo definire tutti i tipi di query (DML,DDL) ma non istruzioni di utility (analyze, vacuum) e non possiamo gestire la transazionalità (no commit, no rollback). Ecco un esempio di funzione:
+```sql
+CREATE OR REPLACE function_name(parameters)
+RETURNS return_type
+AS
+'function body'
+LANGUAGE plpgsql;
+```
+
+Come già introdotto con le viste (view), il costrutto `or replace` introdotto da Postgres è solo per modificare il blocco della funzione ma non possiamo modificare:
+- nome della funzione
+- parametri
+- valore di ritorno
+
+I parametri possono essere passati come:
+- nome e datatype (consigliato)
+- solo datatype, si accede quindi in notazione posizionale
+- nome, datatype e un default
+
+Ad esempio:
+```sql
+CREATE OR REPLACE FUNCTION get_price(id INT)
+RETURNS DEC
+AS
+$$
+DECLARE
+    v_price DEC;
+BEGIN
+    SELECT price
+    INTO v_price
+    FROM products
+    WHERE product_id = id;
+
+    RETURN v_price;
+END;
+$$
+LANGUAGE plpgsql;
+```
+
+A differenza di una function, una `PROCEDURE` non restituisce valori in output:
+```sql
+CREATE OR REPLACE PROCEDURE procedure_name(parameters)
+AS
+$$
+DECLARE
+    -- declaration
+BEGIN
+    -- body
+END;
+$$
+LANGUAGE plpgsql;
+```
+Ad esempio:
+```sql
+CREATE OR REPLACE PROCEDURE update_safety_stock(
+    id INT,
+    new_safety_stock INT
+)
+AS
+$$
+BEGIN
+    UPDATE products
+    SET safety_stock = new_safety_stock
+    WHERE product_id = id;
+END;
+$$
+LANGUAGE plpgsql;
+```
