@@ -30,11 +30,85 @@ Prima di introdurre il concetto di vincolo e le istruzioni SQL per DDL e DML ele
 - tipi temporali: date, ore, intervalli di tempo
 - booleani
 - BLOB, CLOB (Binary/Character Large Object): per grandi immagini e testi
+- tipi binari: bytea e bit
 
 Un tipo particolare di dato è rappresentato dal valore nullo `NULL`. Molti DBMS supportano la possibilità di assegnare a qualsiasi *data-type* il valore `NULL`. Esso rappresenta un valore valido per ogni dominio in quanto non appartiene a un dominio preciso. La gestione dei valori `NULL` deve avvenire in modo dedicato e con cautela (per esempio confrontare `Matricola=NULL` risulta ambiguo).
 
-## Il concetto di vincolo
 
+### Tipi di dato temporali
+
+I tipi di dato temporali supportati in SQL, più precisamente in Postegre, sono:
+- timestamp
+  - con time zone
+  - senza time zone
+- date
+- time
+  - con time zone
+  - senza time zone
+- interval
+
+Il tipo di dato `TIMESTAMP` contiene informazioni riguardanti la data e l'orario (ore, minuti, secondi) ma non il fuso orario. È possibile specificare una precisione che indica il numero di cifre da salvare come microsecondi. Ad esempio:
+```sql
+TIMESTAMP => 2025-08-10 14:30:25 
+
+TIMESTAMP(3) => 2025-08-10 14:30:25.333
+```
+
+Possiamo poi specificare che vogliamo un campo `TIMESTAMPTZ`, ovvero con *time zone*, e quindi andiamo a salvare un riferimento assoluto. Ad esempio `2025-08-10 14:00` a Roma sono le `2025-08-10 08:00` a New York. Quindi con `TIMESTAMP` sono valori diversi e con `TIMESTAMPTZ` sono lo stesso valore.
+
+Il *time zone* viene sostanzialmente espresso attraverso la dicitura `UTC` come standard universale, seguendo il concetto che `UTC = +00`, Roma in estate è `+02`, Roma in inverno è `+01`. Di conseguenza se salviamo `2025-08-10 15:00+02` Postgre salva internamente `2025-08-10 13:00`, ovvero l'istante assoluto, e affianco l'informazione `+02`.
+
+In Postgre sono supportati anche altri tipi di time zone come Central Europe Summer Time (CEST), Central Europe Time (CET)
+
+Durante una sessione, possiamo andare a specificare il fuso orario della sessione corrente, lanciando il comando `SET TIMEZONE=<nome della zona>`, dove `<nome della zona>` può essere ad esempio `'Europe/Rome'`. In questo modo qualsiasi riferimento temporale con fuso orario viene mostrato secondo quel fuso.
+
+Importante notare che il db di default memorizza le date usando il timezone del server su cui è ospitato, salvo diverse configurazioni.
+
+Altro comando importante è `AT TIME ZONE` che consente di convertire un valore temporale, ad esempio ottenuto dopo una proiezione dei dati. Per esempio possiamo dire `SELECT TIMESTAMP '2025-08-10 15:00' AT TIME ZONE 'Europe/Rome';` e otterremo quella data rispetto al fuso specificato.
+
+Analogamente abbiamo lo stesso risultato col tipo di dato `TIME` che permette di salvare solamente l'orario (ore,minuti,secondi) ed eventualmente i microsecondi se specificati via parametro.
+
+```sql
+time => 14:30:25 
+
+time(3) => 14:30:25.333
+```
+
+Anche in questo caso possiamo speficare la parte finale `tz` per indicare un timestamp anche se poco utilizzato.
+
+Abbiamo poi il tipo 'DATE` che consente di specificare solo la data, di default in formato ISO (yyyy-MM-dd). Quindi
+```sql
+DATE => 2025-12-12
+```
+
+Infine abbiamo il tipo `INTERVAL` solitamente utilizzato per contenere un range, un intervallo temporale (un mese, un giorno, due ore). I riferimenti temporali supportati sono:
+- years
+- months
+- weeks
+- days
+- hours
+- minutes
+- seconds
+
+Solitamente a livello di database memorizziamo `INTERVAL '4 months'` e questo dato viene usato per essere aggiunto/sottratto ad altri riferimenti temporali. Ad esempio possiamo fare `SELECT DATE '2025-08-10' + INTERVAL '5 months'`.
+
+Con i campi di tipo date e time possiamo effettuare operazioni come:
+- sommare al tipo DATE dei giorni direttamente come somma di interi alla data `SELECT DATE '2025-08-10' + 5;`, 
+- sommare al tipo TIME/TIMESTAMP con INTERVAL `SELECT TIME '10:00:00' + INTERVAL '2 hours';`
+- fare la sottrazione tra due date ` SELECT DATE '2025-08-10' - DATE '2025-08-10'` e confrontarle `SELECT DATE '2025-08-20' > DATE '2025-08-10';`
+- fare la sottrazione tra due time/timestamp e confrontarle (analogo a sopra)
+
+Possiamo poi usare alcune funzioni built-in come:
+- current_date, che restituisce la data corrente (no orario)
+- current_timestamp, che restituisce il timestamp corrente con *time zone*
+- current_time, che restituisce l'orario corrente con time
+- estrarre parti della data/time tramite `EXTRACT()`
+  - `SELECT EXTRACT(YEAR FROM DATE '2025-08-10');` 
+- arrotondare una data/orario con la funzione `date_trunc()` che supporta molte precisioni tra cui 'hour', 'day', etc..., e genera il valore arrotondato alla precisione specificata impostando a zero gli altri valori. Ad esempio se arrotondiamo per mese, otteniamo il primo giorno di quel mese alle 00:00:00. `SELECT date_trunc('month', DATE '2025-08-10');` genera `2025-08-01 00:00:00` (ATTENZIONE: da DATE passiamo a un TIMESTAMP). Analogamente possiamo farlo su TIME
+- formattazione con `TO_CHAR()`
+  - `SELECT TO_CHAR(DATE '2025-08-10','DD/MM/YYYY' );`
+
+## Il concetto di vincolo 
 All'interno di una relazione, come nella vita reale, possono essere indicati dei vincoli, delle regole (*constraints*), che devono essere rispettate da tutte le tuple che devono appartenere alla relazione. 
 
 Quando si ha a che fare con un DBMS, si parla di **vincoli di integrità**, condizioni che devono essere verificate da **ogni** istanza della base di dati, per esempio dominio degli attributi.
@@ -693,11 +767,11 @@ FROM Proprietari p LEFT JOIN Auto a ON p.id_propriterario = a.id_proprietario
 ```
 In questo caso un possibile risultato potrebbe essere:
 
-| Nome     | Cognome | Targa |
-| -------- | ------- | ------- |
-| Mario    | Rossi    | AA123BB |
-| Francesco | Neri     | AA124CC |
-| Luigi    |  Verdi    | NULL |
+| Nome      | Cognome | Targa   |
+| --------- | ------- | ------- |
+| Mario     | Rossi   | AA123BB |
+| Francesco | Neri    | AA124CC |
+| Luigi     | Verdi   | NULL    |
 
 Da qui possiamo capire che Luigi Verdi non possiede nessuna auto.
 
@@ -720,11 +794,11 @@ FROM Proprietari p RIGHT JOIN Auto a ON p.id_propriterario = a.id_proprietario
 
 In questo caso un possibile risultato potrebbe essere:
 
-| Nome     | Cognome | Targa |
-| -------- | ------- | ------- |
-| Mario    | Rossi    | AA123BB |
-| Francesco | Neri     | AA124CC |
-| NULL    |  NULL    | XX999ZZ |
+| Nome      | Cognome | Targa   |
+| --------- | ------- | ------- |
+| Mario     | Rossi   | AA123BB |
+| Francesco | Neri    | AA124CC |
+| NULL      | NULL    | XX999ZZ |
 
 Da qui possiamo capire che l'auto targata XX999ZZ non ha nessun proprietario associato.
 
@@ -750,10 +824,10 @@ FROM Opere o FULL JOIN Musei m ON o.id_museo = m.id_museo
 In questo caso un possibile risultato potrebbe essere:
 
 | Nome     | Località |
-| -------- | ------- |
-| Gioconda    | Louvre    |
-| NULL       | Uffizi     |
-| Guernica    |  NULL    |
+| -------- | -------- |
+| Gioconda | Louvre   |
+| NULL     | Uffizi   |
+| Guernica | NULL     |
 
 Da qui possiamo capire che la Gioconda è esposta al Louvre mentre gli Uffizi non hanno nulla esposto e analogamente Guernica non è esposto in alcun museo.
 
@@ -777,10 +851,10 @@ WHERE e.codiceEsame IS NULL
 ```
 In questo caso un possibile risultato potrebbe essere:
 
-| Nome     | CodiceEsame |
-| -------- | ------- |
-| Mario    | NULL    |
-| Luigi    | NULL     |
+| Nome  | CodiceEsame |
+| ----- | ----------- |
+| Mario | NULL        |
+| Luigi | NULL        |
 
 Analogamente funziona la `RIGHT ANTI JOIN` che in questo caso restituisce solo i record della tabella di destra completati con `NULL`.
 
@@ -802,10 +876,10 @@ WHERE s.matricola IS NULL
 ```
 In questo caso un possibile risultato potrebbe essere:
 
-| Nome     | CodiceEsame |
-| -------- | ------- |
-|  NULL   |   Matematica  |
-|   NULL  |   Scienze   |
+| Nome | CodiceEsame |
+| ---- | ----------- |
+| NULL | Matematica  |
+| NULL | Scienze     |
 
 Infine introduciamo la `FULL OUTER ANTI JOIN` che di fatto è l'unione della `LEFT ANTI` e `RIGHT ANTI`.
 
@@ -827,11 +901,11 @@ WHERE p.id_proprietario IS NULL OR  a.targa IS NULL
 
 Un possibile risultato è:
 
-| Nome     | Cognome | Targa |
-| -------- | ------- | ------- |
-| Mario    | Rossi    | NULL |
-| NULL | NULL     | AA124CC |
-| NULL    |  NULL    | XX999ZZ |
+| Nome  | Cognome | Targa   |
+| ----- | ------- | ------- |
+| Mario | Rossi   | NULL    |
+| NULL  | NULL    | AA124CC |
+| NULL  | NULL    | XX999ZZ |
 
 Importante notare come nel predicato di selezione della `WHERE` nelle `ANTI JOIN` non controlliamo che tutti i campi siano `NULL` ma per praticità operiamo direttamente sulla chiave della relazione.
 
