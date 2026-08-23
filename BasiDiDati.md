@@ -77,6 +77,7 @@ time(3) => 14:30:25.333
 Anche in questo caso possiamo speficare la parte finale `tz` per indicare un timestamp anche se poco utilizzato.
 
 Abbiamo poi il tipo 'DATE` che consente di specificare solo la data, di default in formato ISO (yyyy-MM-dd). Quindi
+
 ```sql
 DATE => 2025-12-12
 ```
@@ -268,7 +269,7 @@ CREATE TABLE Video(
 );
 ```
 
-![alt text](/img/image-1.png)
+![alt text](./img/image-1.png)
 
 Esempio *inline*:
 ```sql
@@ -753,7 +754,7 @@ Procedendo in ordine e introduciamo la `LEFT JOIN`. Da un punto di vista di esec
 
 Da un punto di vista insiemistico la `LEFT JOIN` può essere vista in questo modo:
 
-![alt text](/img/image-2.png)
+![alt text](./img/image-2.png)
 
 La sintassi della `LEFT JOIN` è:
 ```sql
@@ -779,7 +780,7 @@ La `RIGHT JOIN` opera ugualmente ma semplicemente calcola la join a partire dall
 
 Da un punto di vista insiemistico la `RIGHT JOIN` può essere vista in questo modo:
 
-![alt text](/img/image-3.png)
+![alt text](./img/image-3.png)
 
 La sintassi della `RIGHT JOIN` è:
 ```sql
@@ -808,7 +809,7 @@ Introduciamo ora la `FULL OUTER JOIN` che può essere vista come l'unione delle 
 
 Da un punto di vista insiemistico la `FULL OUTER JOIN` può essere vista in questo modo:
 
-![alt text](/img/image-4.png)
+![alt text](./img/image-4.png)
 
 La sintassi della `FULL OUTER JOIN` è:
 ```sql
@@ -835,7 +836,7 @@ Ora introduciamo le `ANTI JOIN` che rispettano il funzionamento delle precedenti
 
 Per la `LEFT ANTI JOIN` possiamo notare che il risultato insiemistico coincide con:
 
-![alt img](/img/image-5.png)
+![alt img](./img/image-5.png)
 
 E da un punto di vista sintattico abbiamo:
 ```sql
@@ -860,7 +861,7 @@ Analogamente funziona la `RIGHT ANTI JOIN` che in questo caso restituisce solo i
 
 Da un punto di vista insiemistico abbiamo:
 
-![alt text](/img/image-6.png)
+![alt text](./img/image-6.png)
 
 E la sintassi della `RIGHT ANTI JOIN`:
 ```sql
@@ -885,7 +886,7 @@ Infine introduciamo la `FULL OUTER ANTI JOIN` che di fatto è l'unione della `LE
 
 Dal punto di vista insiemistico abbiamo:
 
-![alt text](/img/image-7.png)
+![alt text](./img/image-7.png)
 
 La sintassi della `FULL OUTER ANTI JOIN` è:
 ```sql
@@ -931,7 +932,7 @@ from (values('Martini','Laura'), ('Santi','Simone')) /* ometto alias, comanda la
 
 Con la keyword `explain` in testa a una query, posso vedere l'execution-plan di quella query, da leggere dal basso verso l'alto:
 
-![alt text](/img/image.png)
+![alt text](./img/image.png)
 
 Nel caso di union, un duplicato è un record che compare sia in un insieme che nell'altro mentre nel caso di intersect significa che ho due o più record uguali in entrambi gli insiemi.
 
@@ -1755,7 +1756,7 @@ La window function `row_number` permette di produrre un numero progressivo (a pa
 SELECT employee_id, job_id, row_number() over (partition by job_id)
 FROM employees
 ```
-![alt text](/img/image-8.png)
+![alt text](./img/image-8.png)
 
 La window function `rank` permette di produrre il 'rango' del record corrente (con *gap*), ovvero il row_number del primo record nel gruppo di peers a cui appartiene il record corrente.
 - **rank necessita di ordinamento**, perché per produrre il progressivo utilizza appunto l'ordinamento specificato nella clausola `order by`
@@ -1765,7 +1766,7 @@ La window function `rank` permette di produrre il 'rango' del record corrente (c
 SELECT employee_id, job_id, rank() over (partition by job_id order by first_name desc)
 FROM employees
 ```
-![alt text](/img/image-9.png)
+![alt text](./img/image-9.png)
 
 La window function 'dense_rank' ha lo stesso comportamento della `rank` ma non genera *gap* nei progressivi generati. Analogamente alla precedente necessita di ordinamento.
 
@@ -1774,7 +1775,7 @@ SELECT employee_id, job_id, rank() over (partition by job_id order by first_name
 FROM employees
 ```
 
-![alt text](/img/image-16.png)
+![alt text](./img/image-16.png)
 
 La window function `percent_rank` rende il rank del record corrente in percentuale, calcolato utilizzando questa formula $\frac{rank - 1}{numeroRighePartizione -1}$ 
 - Il primo record della partizione (e i suoi peers) hanno sempre rank=1 quindi `percent_rank` = 0.
@@ -1790,7 +1791,7 @@ percent_rank() over (
 )
 FROM employees
 ```
-![alt text](/img/image-10.png)
+![alt text](./img/image-10.png)
 
 La window function `cume_dist` restituisce la distribuzione cumulativa (ovvero la frazione di valori minori o uguali rispetto al valore corrente all'interno della partizione). Il valore della window function è calcolato valutando questa formula: $\frac{\#recordPrecedentiOPeerDelRecordCorrente}{\#RecordPartizione}$
 
@@ -1804,7 +1805,7 @@ cume_dist() over (
 )
 FROM employees
 ```
-![alt text](/img/image-11.png)
+![alt text](./img/image-11.png)
 
 La window function `ntile(n)` permette, dato in input un valore intero, di suddividere i record ordinati all'interno di una partizione in quel numero di gruppi in uscita, facendo in modo di mantenere gruppi dello stesso numero di record.
 - i gruppi prendono il nome di *bucket*
@@ -1817,7 +1818,7 @@ ntile(3) over (partition by job_id order by employee_id)
 FROM employees
 ```
 
-![alt text](/img/image-12.png)
+![alt text](./img/image-12.png)
 
 
 La funzione `lag(value,[offset,default])` permette di prelevare il valore (`value`) su `offset` record precedenti, e se non lo trova restituisce `default`. Tale funzione richiede 3 parametri:
@@ -1832,7 +1833,7 @@ select employee_id, first_name, job_id, lag(employee_id) over (partition by job_
 from employees
 ```
 
-![alt text](/img/image-13.png)
+![alt text](./img/image-13.png)
 
 
 Vediamo un altro esempio sulla lag:
@@ -1842,7 +1843,7 @@ select employee_id, first_name, job_.id, lag(employee_id,2,-1) over (partition b
 from employees
 ```
 
-![alt text](/img/image-14.png)
+![alt text](./img/image-14.png)
 
 La funzione `lead(value,[offset,default])` al contrario, dato che lag guarda indietro, guarda in avanti. Quindi cerca il `value` su `offset` record successivi. Se non lo trova usa il valore di `default`.
 
@@ -1853,7 +1854,7 @@ SELECT employee_id, first_name, job_id,
 lead(employee_id) over (partition by job_id)
 ```
 
-![alt text](/img/image-17.png)
+![alt text](./img/image-17.png)
 
 
 La funzione `first_value(value)` assume il valore `value` valutato sul primo record della partizione a cui appartiene il record corrente.
@@ -1864,7 +1865,7 @@ first_value(first_name) over (partition by job_id order by employee_id asc)
 FROM employees
 ```
 
-![alt text](/img/image-18.png)
+![alt text](./img/image-18.png)
 
 Analogamente `last_value(value)` assume il valore `value` valutato sull'ultimo record della partizione a cui appartieene il record corrente. 
 
@@ -1878,7 +1879,7 @@ SELECT employee_id, first_name, job_id,
 last_value(first_name) over (partition by job_id)
 ```
 
-![alt text](/img/image-19.png)
+![alt text](./img/image-19.png)
 
 La funzione `nth_value(value, nth)` restituisce il valore `value` valutato sull `nth`-esimo record del frame del record corrente.
 - Se nth-esimo record nella partizione non esiste,
@@ -1905,7 +1906,7 @@ nth_value(first_name,2) over (partition by job_id order by employee_id asc)
 from employees
 ```
 
-![alt text](/img/image-15.png)
+![alt text](./img/image-15.png)
 
 
 ## PL/pgSQL
